@@ -1,19 +1,19 @@
 package self
 
 import (
+	_ "github.com/lib/pq"
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/llm"
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 	"github.com/xo/dburl"
-	"go.mau.fi/whatsmeow"
 )
 
 type BrainEngine struct {
 	DatabaseClient *models.Queries
 	LLMEngine      *llm.LLMEngine
-	WhatsAppClient *whatsmeow.Client
-	Name           string
+	// WhatsAppClient *whatsmeow.Client
+	Name string
 }
 
 func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
@@ -22,9 +22,15 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	llmEngine, err := llm.NewLLMEngine(config)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	client := models.New(db)
 
 	return &BrainEngine{
 		DatabaseClient: client,
+		LLMEngine:      llmEngine,
 	}, nil
 }

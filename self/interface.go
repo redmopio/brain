@@ -2,15 +2,11 @@ package self
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 
 	"github.com/pkg/errors"
-	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/types"
-
-	// "google.golang.org/appengine/log"
-	// "google.golang.org/appengine/log"
-	"google.golang.org/protobuf/proto"
 )
 
 func parseJID(arg string) (types.JID, bool) {
@@ -32,14 +28,26 @@ func parseJID(arg string) (types.JID, bool) {
 	}
 }
 
-func (brain *BrainEngine) ResponseWhatsAppMessage() (string, error) {
-	message := "Hello World"
-	recipient, _ := parseJID("")
-	msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{message}, " "))}
-	resp, err := brain.WhatsAppClient.SendMessage(context.Background(), recipient, msg)
+func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender types.JID, message string) (string, error) {
+	conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
+		String: sender.String(),
+	})
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	return resp.ID, nil
+	response, err := brain.ProcessMessageResponse(&conversation, message)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// message := "Hello World"
+	// recipient, _ := parseJID("")
+	// msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
+	// resp, err := brain.WhatsAppClient.SendMessage(context.Background(), sender, msg)
+	// if err != nil {
+	// 	return "", errors.WithStack(err)
+	// }
+
+	return response, nil
 }

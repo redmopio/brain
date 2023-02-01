@@ -13,7 +13,9 @@ require (
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/PullRequestInc/go-gpt3 v1.1.11 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/lib/pq v1.10.7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/xo/dburl v0.13.0 // indirect
 	go.mau.fi/libsignal v0.1.0 // indirect

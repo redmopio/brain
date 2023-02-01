@@ -8,25 +8,43 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 )
 
+type WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
+
 type WhatsAppConnector struct {
+	// Brain        *self.BrainEngine
 	DatabaseName string
+	Response     WhatsAppResponseFunc
 	// Client       *whatsmeow.Client
 }
 
-func NewWhatsAppConnector(databaseName string) *WhatsAppConnector {
+func NewWhatsAppConnector(databaseName string, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
 		DatabaseName: databaseName,
+
+		Response: response,
+		// Brain:        brain,
 	}
 }
 
-func eventHandler(evt interface{}) {
+func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
-		fmt.Println("Received a message!", v.Message.GetConversation())
+		ctx := context.Background()
+		sender := v.Info.Sender
+		message := v.Message.GetConversation()
+
+		fmt.Println("Received a message:", message)
+		fmt.Println("Sender:", sender)
+
+		_, err := w.Response(ctx, sender, message)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -48,7 +66,7 @@ func (w *WhatsAppConnector) Connect() *whatsmeow.Client {
 	clientLog := waLog.Stdout("Client", "DEBUG", true)
 
 	client := whatsmeow.NewClient(deviceStore, clientLog)
-	client.AddEventHandler(eventHandler)
+	client.AddEventHandler(w.eventHandler)
 
 	if client.Store.ID == nil {
 		qrChan, _ := client.GetQRChannel(context.Background())
