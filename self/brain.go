@@ -9,9 +9,9 @@ import (
 )
 
 type BrainEngine struct {
-	Client    *models.Queries
-	LLMEngine *llm.LLMEngine
-	Name      string
+	DatabaseClient *models.Queries
+	LLMEngine      *llm.LLMEngine
+	Name           string
 }
 
 func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
@@ -23,6 +23,6 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 	client := models.New(db)
 
 	return &BrainEngine{
-		Client: client,
+		DatabaseClient: client,
 	}, nil
 }
