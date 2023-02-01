@@ -4,13 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
+	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
@@ -19,6 +24,7 @@ type WhatsAppConnector struct {
 	// Brain        *self.BrainEngine
 	DatabaseName string
 	Response     WhatsAppResponseFunc
+	client       *whatsmeow.Client
 	// Client       *whatsmeow.Client
 }
 
@@ -34,6 +40,10 @@ func NewWhatsAppConnector(databaseName string, response WhatsAppResponseFunc) *W
 func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
+		if time.Since(v.Info.Timestamp).Minutes() > 1 { // filter out old messages
+			return
+		}
+
 		ctx := context.Background()
 		sender := v.Info.Sender
 		message := v.Message.GetConversation()
@@ -41,10 +51,19 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 		fmt.Println("Received a message:", message)
 		fmt.Println("Sender:", sender)
 
-		_, err := w.Response(ctx, sender, message)
+		response, err := w.Response(ctx, sender, message)
 		if err != nil {
 			panic(err)
 		}
+
+		msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
+
+		resp, err := w.client.SendMessage(context.Background(), sender, msg)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("> Message sent: %s\n", resp.ID)
 	}
 }
 
@@ -87,6 +106,8 @@ func (w *WhatsAppConnector) Connect() *whatsmeow.Client {
 			panic(err)
 		}
 	}
+
+	w.client = client // recursive?
 
 	return client
 }
