@@ -6,11 +6,13 @@ import (
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 	"github.com/xo/dburl"
+	"go.mau.fi/whatsmeow"
 )
 
 type BrainEngine struct {
 	DatabaseClient *models.Queries
 	LLMEngine      *llm.LLMEngine
+	WhatsAppClient *whatsmeow.Client
 	Name           string
 }
 

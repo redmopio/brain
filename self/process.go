@@ -35,3 +35,12 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 
 	return strings.TrimSpace(res.Choices[0].Text), nil
 }
+
+func (brain *BrainEngine) ProcessMessage(conversation *models.Conversation, message string) (string, error) {
+	predicted, err := brain.Predict(conversation, message)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return predicted, nil
+}

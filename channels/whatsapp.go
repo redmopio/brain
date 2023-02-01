@@ -14,6 +14,7 @@ import (
 
 type WhatsAppConnector struct {
 	DatabaseName string
+	// Client       *whatsmeow.Client
 }
 
 func NewWhatsAppConnector(databaseName string) *WhatsAppConnector {
