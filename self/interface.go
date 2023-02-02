@@ -3,8 +3,10 @@ package self
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
+	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 	"go.mau.fi/whatsmeow/types"
 )
@@ -29,8 +31,11 @@ func parseJID(arg string) (types.JID, bool) {
 }
 
 func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender types.JID, message string) (string, error) {
+	fmt.Println("Message from", sender.String(), ":", message)
+
 	conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
 		String: sender.String(),
+		Valid:  true,
 	})
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -41,6 +46,14 @@ func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender ty
 		return "", errors.WithStack(err)
 	}
 
+	brain.DatabaseClient.UpdateConversationBuffer(ctx, models.UpdateConversationBufferParams{
+		ID: conversation.ID,
+		ConversationBuffer: sql.NullString{
+			String: response.NewBuffer,
+			Valid:  true,
+		},
+	})
+
 	// message := "Hello World"
 	// recipient, _ := parseJID("")
 	// msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
@@ -49,5 +62,5 @@ func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender ty
 	// 	return "", errors.WithStack(err)
 	// }
 
-	return response, nil
+	return response.PredictedResponse, nil
 }

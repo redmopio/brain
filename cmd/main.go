@@ -27,6 +27,19 @@ func main() {
 		panic(err)
 	}
 
+	// jid := "51986253867@s.whatsapp.net"
+	// ctx := context.Background()
+
+	// conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
+	// 	String: jid,
+	// 	Valid:  true,
+	// })
+	// if err != nil {
+	// 	panic(errors.WithStack(err))
+	// }
+
+	// fmt.Println(conversation)
+
 	client := channels.NewWhatsAppConnector("examplestore.db", func(ctx context.Context, sender types.JID, message string) (string, error) {
 		return brain.ResponseWhatsAppMessage(ctx, sender, message)
 	}).Connect()

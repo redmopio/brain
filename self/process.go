@@ -26,8 +26,15 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 
 	ctx := context.Background()
 
+	fmt.Println("PROMPT:", prompt)
+
+	n := 1
+
 	res, err := brain.LLMEngine.Client.Completion(ctx, gpt3.CompletionRequest{
 		Prompt: []string{prompt},
+		Stop:   []string{fmt.Sprintf("%s:", conversation.UserName.String)},
+		N:      &n,
+		// MaxTokens: &tokens,
 	})
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -36,11 +43,37 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 	return strings.TrimSpace(res.Choices[0].Text), nil
 }
 
-func (brain *BrainEngine) ProcessMessageResponse(conversation *models.Conversation, message string) (string, error) {
+type MessageResponse struct {
+	PredictedResponse string
+	NewBuffer         string
+}
+
+func (brain *BrainEngine) ProcessMessageResponse(conversation *models.Conversation, message string) (*MessageResponse, error) {
 	predicted, err := brain.Predict(conversation, message)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
-	return predicted, nil
+	newBuffer := fmt.Sprintf("%s\n%s:%s\n%s:%s",
+		conversation.ConversationBuffer.String,
+		conversation.UserName.String,
+		message,
+		brain.Name,
+		predicted,
+	)
+
+	maxLines := 5
+
+	lines := strings.Split(newBuffer, "\n")
+
+	if len(lines) > maxLines {
+		newBuffer = strings.Join(lines[len(lines)-maxLines:], "\n")
+	} else {
+		newBuffer = strings.Join(lines, "\n")
+	}
+
+	return &MessageResponse{
+		PredictedResponse: predicted,
+		NewBuffer:         newBuffer,
+	}, nil
 }

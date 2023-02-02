@@ -12,8 +12,7 @@ import (
 type BrainEngine struct {
 	DatabaseClient *models.Queries
 	LLMEngine      *llm.LLMEngine
-	// WhatsAppClient *whatsmeow.Client
-	Name string
+	Name           string
 }
 
 func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
@@ -32,5 +31,6 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 	return &BrainEngine{
 		DatabaseClient: client,
 		LLMEngine:      llmEngine,
+		Name:           "AI",
 	}, nil
 }

@@ -8,6 +8,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -93,6 +94,7 @@ WHERE jid = $1 LIMIT 1
 
 func (q *Queries) GetConversationByJid(ctx context.Context, jid sql.NullString) (Conversation, error) {
 	row := q.db.QueryRowContext(ctx, getConversationByJid, jid)
+	fmt.Println(row)
 	var i Conversation
 	err := row.Scan(
 		&i.ID,
