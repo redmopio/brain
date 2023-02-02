@@ -21,19 +21,15 @@ import (
 type WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
 
 type WhatsAppConnector struct {
-	// Brain        *self.BrainEngine
 	DatabaseName string
 	Response     WhatsAppResponseFunc
 	client       *whatsmeow.Client
-	// Client       *whatsmeow.Client
 }
 
 func NewWhatsAppConnector(databaseName string, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
 		DatabaseName: databaseName,
-
-		Response: response,
-		// Brain:        brain,
+		Response:     response,
 	}
 }
 

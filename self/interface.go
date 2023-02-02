@@ -30,7 +30,7 @@ func parseJID(arg string) (types.JID, bool) {
 	}
 }
 
-func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender types.JID, message string) (string, error) {
+func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, sender types.JID, message string) (string, error) {
 	fmt.Println("Message from", sender.String(), ":", message)
 
 	conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
@@ -53,14 +53,6 @@ func (brain *BrainEngine) ResponseWhatsAppMessage(ctx context.Context, sender ty
 			Valid:  true,
 		},
 	})
-
-	// message := "Hello World"
-	// recipient, _ := parseJID("")
-	// msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
-	// resp, err := brain.WhatsAppClient.SendMessage(context.Background(), sender, msg)
-	// if err != nil {
-	// 	return "", errors.WithStack(err)
-	// }
 
 	return response.PredictedResponse, nil
 }

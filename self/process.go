@@ -28,12 +28,18 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 
 	fmt.Println("PROMPT:", prompt)
 
-	n := 1
+	// n := 1
+
+	stopSequences := []string{
+		// fmt.Sprintf("%s:", conversation.UserName.String),
+		"\n",
+	}
 
 	res, err := brain.LLMEngine.Client.Completion(ctx, gpt3.CompletionRequest{
-		Prompt: []string{prompt},
-		Stop:   []string{fmt.Sprintf("%s:", conversation.UserName.String)},
-		N:      &n,
+		Prompt:      []string{prompt},
+		Stop:        stopSequences,
+		N:           gpt3.IntPtr(1),
+		Temperature: gpt3.Float32Ptr(0.6),
 		// MaxTokens: &tokens,
 	})
 	if err != nil {
