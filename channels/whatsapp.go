@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mdp/qrterminal/v3"
+	"github.com/minskylab/brain/config"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -21,15 +22,15 @@ import (
 type WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
 
 type WhatsAppConnector struct {
-	DatabaseName string
-	Response     WhatsAppResponseFunc
-	client       *whatsmeow.Client
+	DatabaseName      string
+	CalculateResponse WhatsAppResponseFunc
+	client            *whatsmeow.Client
 }
 
-func NewWhatsAppConnector(databaseName string, response WhatsAppResponseFunc) *WhatsAppConnector {
+func NewWhatsAppConnector(config *config.Config, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
-		DatabaseName: databaseName,
-		Response:     response,
+		DatabaseName:      config.WhatsAppDatabaseName,
+		CalculateResponse: response,
 	}
 }
 
@@ -47,7 +48,7 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 		fmt.Println("Received a message:", message)
 		fmt.Println("Sender:", sender)
 
-		response, err := w.Response(ctx, sender, message)
+		response, err := w.CalculateResponse(ctx, sender, message)
 		if err != nil {
 			panic(err)
 		}

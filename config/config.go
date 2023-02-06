@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string `envconfig:"database_url" required:"true"`
-	OpenAIKey   string `envconfig:"openai_key" required:"true"`
+	DatabaseURL          string `envconfig:"database_url" required:"true"`
+	OpenAIKey            string `envconfig:"openai_key" required:"true"`
+	WhatsAppDatabaseName string `envconfig:"whatsapp_database_name" default:"whatsapp-store.db"`
 }
 
 func NewLoadedConfig() (*Config, error) {

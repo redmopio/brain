@@ -28,19 +28,21 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 
 	fmt.Println("PROMPT:", prompt)
 
-	// n := 1
+	engineName := "text-chat-davinci-002-20221122"
 
 	stopSequences := []string{
-		// fmt.Sprintf("%s:", conversation.UserName.String),
 		"\n",
 	}
 
-	res, err := brain.LLMEngine.Client.Completion(ctx, gpt3.CompletionRequest{
-		Prompt:      []string{prompt},
-		Stop:        stopSequences,
-		N:           gpt3.IntPtr(1),
-		Temperature: gpt3.Float32Ptr(0.6),
-		// MaxTokens: &tokens,
+	// res, err := brain.LLMEngine.Client.Completion()
+	res, err := brain.LLMEngine.Client.CompletionWithEngine(ctx, engineName, gpt3.CompletionRequest{
+		Prompt:          []string{prompt},
+		Stop:            stopSequences,
+		N:               gpt3.IntPtr(1),
+		Temperature:     gpt3.Float32Ptr(0.9),
+		TopP:            gpt3.Float32Ptr(1.0),
+		PresencePenalty: 0.6,
+		MaxTokens:       gpt3.IntPtr(100),
 	})
 	if err != nil {
 		return "", errors.WithStack(err)
