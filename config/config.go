@@ -7,9 +7,12 @@ import (
 )
 
 type Config struct {
-	DatabaseURL          string `envconfig:"database_url" required:"true"`
+	Name                 string `envconfig:"name" default:"AI"`
+	DatabaseURL          string `envconfig:"database_url" default:"sqlite3://brain.db"`
 	OpenAIKey            string `envconfig:"openai_key" required:"true"`
 	WhatsAppDatabaseName string `envconfig:"whatsapp_database_name" default:"whatsapp-store.db"`
+	TelegramAPIKey       string `envconfig:"telegram_api_key" default:""`
+	WhatsAppDisable      bool   `envconfig:"whatsapp_disable" default:"false"`
 }
 
 func NewLoadedConfig() (*Config, error) {

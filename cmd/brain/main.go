@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -26,18 +27,35 @@ func main() {
 		panic(err)
 	}
 
-	whatsAppClient := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		response, err := brain.GenerateConversationResponse(ctx, sender, message)
+	ctx := context.Background()
+
+	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
+		response, err := brain.GenerateConversationResponse(ctx, sender.String(), message)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
 
 		return strings.ReplaceAll(response, "<|im_end|>", ""), nil
-	}).Connect()
+	})
+
+	fmt.Println(config.WhatsAppDisable)
+
+	if !config.WhatsAppDisable {
+		whatsAppChannel.Connect(ctx)
+	}
+
+	if config.TelegramAPIKey != "" {
+		telegramChannel := channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
+			return brain.GenerateConversationResponse(ctx, sender, message)
+		})
+
+		telegramChannel.Connect(ctx)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 
-	whatsAppClient.Disconnect()
+	whatsAppChannel.Disconnect(ctx)
+	// telegramChannel.Disconnect(ctx)
 }

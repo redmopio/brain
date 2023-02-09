@@ -19,13 +19,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
-
-type WhatsAppConnector struct {
-	DatabaseName      string
-	CalculateResponse WhatsAppResponseFunc
-	client            *whatsmeow.Client
-}
+type (
+	WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
+	WhatsAppConnector    struct {
+		DatabaseName      string
+		CalculateResponse WhatsAppResponseFunc
+		client            *whatsmeow.Client
+	}
+)
 
 func NewWhatsAppConnector(config *config.Config, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
@@ -64,7 +65,7 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 	}
 }
 
-func (w *WhatsAppConnector) Connect() *whatsmeow.Client {
+func (w *WhatsAppConnector) Connect(ctx context.Context) {
 	dbLog := waLog.Stdout("Database", "DEBUG", true)
 
 	storeName := fmt.Sprintf("file:%s?_foreign_keys=on", w.DatabaseName)
@@ -106,5 +107,9 @@ func (w *WhatsAppConnector) Connect() *whatsmeow.Client {
 
 	w.client = client // recursive?
 
-	return client
+	// return client
+}
+
+func (w *WhatsAppConnector) Disconnect(ctx context.Context) {
+	w.client.Disconnect()
 }

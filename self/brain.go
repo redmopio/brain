@@ -21,6 +21,18 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	// data, err := os.ReadFile("database/schema.sql")
+	// if err != nil {
+	// 	return nil, errors.WithStack(err)
+	// }
+
+	// dataString := string(data)
+	// fmt.Println(dataString)
+
+	// if _, err = db.Exec(dataString); err != nil {
+	// 	return nil, errors.WithStack(err)
+	// }
+
 	llmEngine, err := llm.NewLLMEngine(config)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -31,6 +43,6 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 	return &BrainEngine{
 		DatabaseClient: client,
 		LLMEngine:      llmEngine,
-		Name:           "AI",
+		Name:           config.Name,
 	}, nil
 }

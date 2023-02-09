@@ -30,11 +30,11 @@ func parseJID(arg string) (types.JID, bool) {
 	}
 }
 
-func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, sender types.JID, message string) (string, error) {
-	fmt.Println("Message from", sender.String(), ":", message)
+func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, sender string, message string) (string, error) {
+	fmt.Println("Message from", sender, ":\n", message)
 
 	conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
-		String: sender.String(),
+		String: sender,
 		Valid:  true,
 	})
 	if err != nil {

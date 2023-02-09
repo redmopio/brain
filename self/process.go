@@ -28,10 +28,10 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 
 	fmt.Println("PROMPT:", prompt)
 
-	engineName := "text-chat-davinci-002-20221122"
+	engineName := "text-davinci-003"
 
 	stopSequences := []string{
-		"\n",
+		// "\n",
 	}
 
 	// res, err := brain.LLMEngine.Client.Completion()
@@ -42,7 +42,7 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 		Temperature:     gpt3.Float32Ptr(0.9),
 		TopP:            gpt3.Float32Ptr(1.0),
 		PresencePenalty: 0.6,
-		MaxTokens:       gpt3.IntPtr(100),
+		MaxTokens:       gpt3.IntPtr(1000),
 	})
 	if err != nil {
 		return "", errors.WithStack(err)
