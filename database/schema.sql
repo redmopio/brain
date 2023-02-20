@@ -1,5 +1,5 @@
-create table conversations (
-    id                   uuid                     default gen_random_uuid() not null
+CREATE TABLE conversations (
+    id                   uuid                     default gen_random_uuid() not null 
                                                   primary key,
     created_at           timestamp with time zone default now()             not null,
     updated_at           timestamp with time zone default now()             not null,

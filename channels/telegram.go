@@ -39,6 +39,11 @@ func (t *TelegramConnector) Connect(ctx context.Context) {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
+		log.Println(update)
+
+		if update.ChannelPost != nil {
+			log.Printf("[%s] %s", update.ChannelPost.From.UserName, update.ChannelPost.Text)
+		}
 		if update.Message != nil { // If we got a message
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 

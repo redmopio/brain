@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -38,9 +37,7 @@ func main() {
 		return strings.ReplaceAll(response, "<|im_end|>", ""), nil
 	})
 
-	fmt.Println(config.WhatsAppDisable)
-
-	if !config.WhatsAppDisable {
+	if !config.WhatsAppDisabled {
 		whatsAppChannel.Connect(ctx)
 	}
 
