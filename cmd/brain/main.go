@@ -38,7 +38,7 @@ func main() {
 	})
 
 	if !config.WhatsAppDisabled {
-		whatsAppChannel.Connect(ctx)
+		go whatsAppChannel.Connect(ctx)
 	}
 
 	if config.TelegramAPIKey != "" {
