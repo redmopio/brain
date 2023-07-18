@@ -17,4 +17,5 @@ RUN go build ./cmd/brain
 EXPOSE 8080
 
 # Specifies the executable command that runs when the container starts
-ENTRYPOINT [ “./app/brain ]
+CMD [ "/app/brain" ]
+
