@@ -39,6 +39,13 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
+          build-args: |
+            BRAIN_DATABASE_URL=${{ secrets.BRAIN_DATABASE_URL }}
+            BRAIN_OPENAI_KEY=${{ secrets.BRAIN_OPENAI_KEY }}
+            BRAIN_WHATSAPP_DATABASE_NAME=${{ secrets.BRAIN_WHATSAPP_DATABASE_NAME }}
+            BRAIN_TELEGRAM_API_KEY=${{ secrets.BRAIN_TELEGRAM_API_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
