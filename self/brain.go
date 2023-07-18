@@ -53,9 +53,8 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 		if err != nil && !strings.Contains(err.Error(), "already exists") {
 			return nil, errors.WithStack(err)
 		}
-		// if err != nil {
+
 		fmt.Println("Database already exists, skipping prelude")
-		// }
 	}
 
 	llmEngine, err := llm.NewLLMEngine(config)

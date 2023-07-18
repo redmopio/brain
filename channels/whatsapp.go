@@ -56,7 +56,8 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 
 		msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
 
-		resp, err := w.client.SendMessage(context.Background(), sender, msg)
+		senderJID := sender.ToNonAD()
+		resp, err := w.client.SendMessage(context.Background(), senderJID, msg)
 		if err != nil {
 			panic(err)
 		}
