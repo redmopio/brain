@@ -8,5 +8,6 @@ CREATE TABLE conversations (
     context              text,
     conversation_buffer  text,
     conversation_summary text,
-    user_name            text
+    user_name            text,
+    tools json
 );

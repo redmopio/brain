@@ -8,9 +8,9 @@ ORDER BY updated_at;
 
 -- name: CreateConversation :one
 INSERT INTO conversations (
-  phone_number, jid, context, conversation_buffer, conversation_summary, user_name
+  phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7
 )
 RETURNING *;
 
