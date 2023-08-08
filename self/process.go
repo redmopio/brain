@@ -1,54 +1,71 @@
 package self
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
-	"github.com/PullRequestInc/go-gpt3"
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
+	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) prepareConversationPrompt(conversation *models.Conversation, message string) string {
-	return fmt.Sprintf("%s\n\nCurrent conversation:\n\n%s\n\n%s\n%s: %s\n%s:",
-		conversation.Context.String,
-		conversation.ConversationSummary.String,
-		conversation.ConversationBuffer.String,
-		conversation.UserName.String,
-		message,
-		brain.Name,
-	)
+func (brain *BrainEngine) prepareConversationPrompt(conversation *models.Conversation, message string) openai.ChatCompletionRequest {
+	// conversation.
+
+	return openai.ChatCompletionRequest{
+		Model: openai.GPT3Dot5Turbo,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: conversation.Context.String,
+			},
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: "Hello!",
+			},
+		},
+	}
+
+	// return fmt.Sprintf("%s\n\nCurrent conversation:\n\n%s\n\n%s\n%s: %s\n%s:",
+	// 	conversation.Context.String,
+	// 	conversation.ConversationSummary.String,
+	// 	conversation.ConversationBuffer.String,
+	// 	conversation.UserName.String,
+	// 	message,
+	// 	brain.Name,
+	// )
 }
 
 func (brain *BrainEngine) Predict(conversation *models.Conversation, message string) (string, error) {
-	prompt := brain.prepareConversationPrompt(conversation, message)
+	// prompt := brain.prepareConversationPrompt(conversation, message)
 
-	ctx := context.Background()
+	// ctx := context.Background()
 
-	fmt.Println("PROMPT:", prompt)
+	// fmt.Println("PROMPT:", prompt)
 
-	engineName := "text-davinci-003"
+	// engineName := "text-davinci-003"
 
-	stopSequences := []string{
-		// "\n",
-	}
+	// stopSequences := []string{
+	// 	// "\n",
+	// }
 
 	// res, err := brain.LLMEngine.Client.Completion()
-	res, err := brain.LLMEngine.Client.CompletionWithEngine(ctx, engineName, gpt3.CompletionRequest{
-		Prompt:          []string{prompt},
-		Stop:            stopSequences,
-		N:               gpt3.IntPtr(1),
-		Temperature:     gpt3.Float32Ptr(0.9),
-		TopP:            gpt3.Float32Ptr(1.0),
-		PresencePenalty: 0.6,
-		MaxTokens:       gpt3.IntPtr(1000),
-	})
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
+	// res, err := brain.LLMEngine.Client.CompletionWithEngine(ctx, engineName, gpt3.CompletionRequest{
+	// 	Prompt:          []string{prompt},
+	// 	Stop:            stopSequences,
+	// 	N:               gpt3.IntPtr(1),
+	// 	Temperature:     gpt3.Float32Ptr(0.9),
+	// 	TopP:            gpt3.Float32Ptr(1.0),
+	// 	PresencePenalty: 0.6,
+	// 	MaxTokens:       gpt3.IntPtr(1000),
+	// })
+	// if err != nil {
+	// 	return "", errors.WithStack(err)
+	// }
 
-	return strings.TrimSpace(res.Choices[0].Text), nil
+	// return strings.TrimSpace(res.Choices[0].Text), nil
+
+	return "", nil
 }
 
 type MessageResponse struct {
