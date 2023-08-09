@@ -4,14 +4,12 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/minskylab/brain/channels"
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/self"
-	"github.com/pkg/errors"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -29,20 +27,22 @@ func main() {
 	ctx := context.Background()
 
 	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		response, err := brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, sender.String(), message)
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
+		return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, sender.String(), message)
+		// if err != nil {
+		// 	return "", errors.WithStack(err)
+		// }
 
-		return strings.ReplaceAll(response, "<|im_end|>", ""), nil
+		// return strings.ReplaceAll(response, "<|im_end|>", ""), nil
 	})
 
 	if !config.WhatsAppDisabled {
 		go whatsAppChannel.Connect(ctx)
 	}
 
+	var telegramChannel *channels.TelegramConnector
+
 	if config.TelegramAPIKey != "" {
-		telegramChannel := channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
+		telegramChannel = channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
 			return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)
 		})
 
@@ -54,5 +54,8 @@ func main() {
 	<-c
 
 	whatsAppChannel.Disconnect(ctx)
-	// telegramChannel.Disconnect(ctx)
+
+	if telegramChannel != nil {
+		telegramChannel.Disconnect(ctx)
+	}
 }
