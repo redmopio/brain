@@ -24,6 +24,6 @@ CREATE TABLE messages (
     role       text,
     content    text,
 
-    parent_id  uuid references message(id)
+    parent_id  uuid NULL default NULL references messages(id) ON DELETE SET NULL
 );
 
