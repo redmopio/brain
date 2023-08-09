@@ -3,6 +3,8 @@ package self
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/minskylab/brain/models"
@@ -27,6 +29,8 @@ func (brain *BrainEngine) prepareMessagesForConversation(user *models.User, last
 			name = ""
 		}
 
+		name = strings.ReplaceAll(name, " ", "_")
+
 		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    role,
 			Name:    name,
@@ -38,35 +42,13 @@ func (brain *BrainEngine) prepareMessagesForConversation(user *models.User, last
 }
 
 func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *models.User, lastMessages []models.Message, message *models.Message) (*models.Message, error) {
-	// predicted, err := brain.Predict(conversation, message)
-	// if err != nil {
-	// 	return nil, errors.WithStack(err)
-	// }
-
-	// newBuffer := fmt.Sprintf("%s\n%s:%s\n%s:%s",
-	// 	conversation.ConversationBuffer.String,
-	// 	conversation.UserName.String,
-	// 	message,
-	// 	brain.Name,
-	// 	predicted,
-	// )
-
-	// maxLines := 5
-
-	// lines := strings.Split(newBuffer, "\n")
-
-	// if len(lines) > maxLines {
-	// 	newBuffer = strings.Join(lines[len(lines)-maxLines:], "\n")
-	// } else {
-	// 	newBuffer = strings.Join(lines, "\n")
-	// }
-
-	// return &MessageResponse{
-	// 	PredictedResponse: predicted,
-	// 	NewBuffer:         newBuffer,
-	// }, nil
-
 	messages := brain.prepareMessagesForConversation(user, lastMessages, message)
+
+	fmt.Printf("Size of messages: %d\n", len(messages))
+
+	for _, msg := range messages {
+		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, msg.Content)
+	}
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,

@@ -28,11 +28,6 @@ func main() {
 
 	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
 		return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, sender.String(), message)
-		// if err != nil {
-		// 	return "", errors.WithStack(err)
-		// }
-
-		// return strings.ReplaceAll(response, "<|im_end|>", ""), nil
 	})
 
 	if !config.WhatsAppDisabled {
