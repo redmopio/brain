@@ -10,158 +10,67 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
-const createConversation = `-- name: CreateConversation :one
-INSERT INTO conversations (
-  phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
+const createMessage = `-- name: CreateMessage :one
+INSERT INTO messages (
+  id, user_id, role, content, parent_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
-)
-RETURNING id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
+  $1, $2, $3, $4, $5
+) RETURNING id, created_at, updated_at, user_id, role, content, parent_id
 `
 
-type CreateConversationParams struct {
-	PhoneNumber         string
-	Jid                 sql.NullString
-	Context             sql.NullString
-	ConversationBuffer  sql.NullString
-	ConversationSummary sql.NullString
-	UserName            sql.NullString
-	Tools               pqtype.NullRawMessage
+type CreateMessageParams struct {
+	ID       uuid.UUID
+	UserID   uuid.NullUUID
+	Role     sql.NullString
+	Content  sql.NullString
+	ParentID uuid.NullUUID
 }
 
-func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversationParams) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, createConversation,
-		arg.PhoneNumber,
-		arg.Jid,
-		arg.Context,
-		arg.ConversationBuffer,
-		arg.ConversationSummary,
-		arg.UserName,
-		arg.Tools,
+func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
+	row := q.db.QueryRowContext(ctx, createMessage,
+		arg.ID,
+		arg.UserID,
+		arg.Role,
+		arg.Content,
+		arg.ParentID,
 	)
-	var i Conversation
+	var i Message
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.PhoneNumber,
-		&i.Jid,
-		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
-		&i.UserName,
-		&i.Tools,
+		&i.UserID,
+		&i.Role,
+		&i.Content,
+		&i.ParentID,
 	)
 	return i, err
 }
 
-const deleteConversation = `-- name: DeleteConversation :exec
-DELETE FROM conversations
-WHERE id = $1
+const getMessagesByUserID = `-- name: GetMessagesByUserID :many
+SELECT id, created_at, updated_at, user_id, role, content, parent_id FROM messages
+WHERE user_id = $1 LIMIT 20
 `
 
-func (q *Queries) DeleteConversation(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteConversation, id)
-	return err
-}
-
-const getConversation = `-- name: GetConversation :one
-SELECT id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools FROM conversations
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetConversation(ctx context.Context, id uuid.UUID) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, getConversation, id)
-	var i Conversation
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.PhoneNumber,
-		&i.Jid,
-		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
-		&i.UserName,
-		&i.Tools,
-	)
-	return i, err
-}
-
-const getConversationByJid = `-- name: GetConversationByJid :one
-SELECT id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools FROM conversations
-WHERE jid = $1 LIMIT 1
-`
-
-func (q *Queries) GetConversationByJid(ctx context.Context, jid sql.NullString) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, getConversationByJid, jid)
-	var i Conversation
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.PhoneNumber,
-		&i.Jid,
-		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
-		&i.UserName,
-		&i.Tools,
-	)
-	return i, err
-}
-
-const getConversationByPhoneNumber = `-- name: GetConversationByPhoneNumber :one
-SELECT id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools FROM conversations
-WHERE phone_number = $1 LIMIT 1
-`
-
-func (q *Queries) GetConversationByPhoneNumber(ctx context.Context, phoneNumber string) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, getConversationByPhoneNumber, phoneNumber)
-	var i Conversation
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.PhoneNumber,
-		&i.Jid,
-		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
-		&i.UserName,
-		&i.Tools,
-	)
-	return i, err
-}
-
-const listConversations = `-- name: ListConversations :many
-SELECT id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools FROM conversations
-ORDER BY updated_at
-`
-
-func (q *Queries) ListConversations(ctx context.Context) ([]Conversation, error) {
-	rows, err := q.db.QueryContext(ctx, listConversations)
+func (q *Queries) GetMessagesByUserID(ctx context.Context, userID uuid.NullUUID) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, getMessagesByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Conversation
+	var items []Message
 	for rows.Next() {
-		var i Conversation
+		var i Message
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.PhoneNumber,
-			&i.Jid,
-			&i.Context,
-			&i.ConversationBuffer,
-			&i.ConversationSummary,
-			&i.UserName,
-			&i.Tools,
+			&i.UserID,
+			&i.Role,
+			&i.Content,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -176,92 +85,44 @@ func (q *Queries) ListConversations(ctx context.Context) ([]Conversation, error)
 	return items, nil
 }
 
-const updateConversationBuffer = `-- name: UpdateConversationBuffer :one
-UPDATE conversations
-SET conversation_buffer = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
+const getUserByJID = `-- name: GetUserByJID :one
+SELECT id, created_at, updated_at, phone_number, jid, telegram_id, context, user_name FROM users
+WHERE jid = $1 LIMIT 1
 `
 
-type UpdateConversationBufferParams struct {
-	ConversationBuffer sql.NullString
-	ID                 uuid.UUID
-}
-
-func (q *Queries) UpdateConversationBuffer(ctx context.Context, arg UpdateConversationBufferParams) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, updateConversationBuffer, arg.ConversationBuffer, arg.ID)
-	var i Conversation
+func (q *Queries) GetUserByJID(ctx context.Context, jid sql.NullString) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByJID, jid)
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PhoneNumber,
 		&i.Jid,
+		&i.TelegramID,
 		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
 		&i.UserName,
-		&i.Tools,
 	)
 	return i, err
 }
 
-const updateConversationContext = `-- name: UpdateConversationContext :one
-UPDATE conversations
-SET context = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
+const getUserByTelegramID = `-- name: GetUserByTelegramID :one
+SELECT id, created_at, updated_at, phone_number, jid, telegram_id, context, user_name FROM users
+WHERE telegram_id = $1 LIMIT 1
 `
 
-type UpdateConversationContextParams struct {
-	Context sql.NullString
-	ID      uuid.UUID
-}
-
-func (q *Queries) UpdateConversationContext(ctx context.Context, arg UpdateConversationContextParams) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, updateConversationContext, arg.Context, arg.ID)
-	var i Conversation
+func (q *Queries) GetUserByTelegramID(ctx context.Context, telegramID sql.NullString) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByTelegramID, telegramID)
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PhoneNumber,
 		&i.Jid,
+		&i.TelegramID,
 		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
 		&i.UserName,
-		&i.Tools,
-	)
-	return i, err
-}
-
-const updateConversationSummary = `-- name: UpdateConversationSummary :one
-UPDATE conversations
-SET conversation_summary = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, phone_number, jid, context, conversation_buffer, conversation_summary, user_name, tools
-`
-
-type UpdateConversationSummaryParams struct {
-	ConversationSummary sql.NullString
-	ID                  uuid.UUID
-}
-
-func (q *Queries) UpdateConversationSummary(ctx context.Context, arg UpdateConversationSummaryParams) (Conversation, error) {
-	row := q.db.QueryRowContext(ctx, updateConversationSummary, arg.ConversationSummary, arg.ID)
-	var i Conversation
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.PhoneNumber,
-		&i.Jid,
-		&i.Context,
-		&i.ConversationBuffer,
-		&i.ConversationSummary,
-		&i.UserName,
-		&i.Tools,
 	)
 	return i, err
 }

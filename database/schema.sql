@@ -1,6 +1,5 @@
-CREATE TABLE user (
-    id                   uuid                     default gen_random_uuid() not null 
-                                                  primary key,
+CREATE TABLE users (
+    id                   uuid                     default gen_random_uuid() not null primary key,
     created_at           timestamp with time zone default now()             not null,
     updated_at           timestamp with time zone default now()             not null,
     phone_number         text                                               not null,
@@ -15,15 +14,16 @@ CREATE TABLE user (
 );
 
 
-CREATE TABLE message (
+CREATE TABLE messages (
     id         uuid default gen_random_uuid() not null primary key,
 
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
 
-    user_id    uuid references user(id),
+    user_id    uuid references users(id),
     role       text,
     content    text,
 
     parent_id  uuid references message(id)
 );
+

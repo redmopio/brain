@@ -9,18 +9,25 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
-type Conversation struct {
-	ID                  uuid.UUID
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	PhoneNumber         string
-	Jid                 sql.NullString
-	Context             sql.NullString
-	ConversationBuffer  sql.NullString
-	ConversationSummary sql.NullString
-	UserName            sql.NullString
-	Tools               pqtype.NullRawMessage
+type Message struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserID    uuid.NullUUID
+	Role      sql.NullString
+	Content   sql.NullString
+	ParentID  uuid.NullUUID
+}
+
+type User struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	PhoneNumber string
+	Jid         sql.NullString
+	TelegramID  sql.NullString
+	Context     sql.NullString
+	UserName    sql.NullString
 }

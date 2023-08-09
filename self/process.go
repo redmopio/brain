@@ -1,42 +1,38 @@
 package self
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/minskylab/brain/models"
-	"github.com/pkg/errors"
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) prepareConversationPrompt(conversation *models.Conversation, message string) openai.ChatCompletionRequest {
-	// conversation.
+func (brain *BrainEngine) prepareConversationPrompt(user *models.User, lastMessages []*models.Message, message *models.Message) openai.ChatCompletionRequest {
+	messages := make([]openai.ChatCompletionMessage, 0, len(lastMessages)+1)
 
-	return openai.ChatCompletionRequest{
-		Model: openai.GPT3Dot5Turbo,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: conversation.Context.String,
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: "Hello!",
-			},
-		},
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleSystem,
+		Content: user.Context.String,
+	})
+
+	for _, msg := range lastMessages {
+		role := openai.ChatMessageRoleUser
+
+		if msg.Role.String == openai.ChatMessageRoleAssistant {
+			role = openai.ChatMessageRoleAssistant
+		}
+
+		messages = append(messages, openai.ChatCompletionMessage{
+			Role:    role,
+			Content: msg.Content.String,
+		})
 	}
 
-	// return fmt.Sprintf("%s\n\nCurrent conversation:\n\n%s\n\n%s\n%s: %s\n%s:",
-	// 	conversation.Context.String,
-	// 	conversation.ConversationSummary.String,
-	// 	conversation.ConversationBuffer.String,
-	// 	conversation.UserName.String,
-	// 	message,
-	// 	brain.Name,
-	// )
+	return openai.ChatCompletionRequest{
+		Model:    openai.GPT3Dot5Turbo,
+		Messages: messages,
+	}
 }
 
-func (brain *BrainEngine) Predict(conversation *models.Conversation, message string) (string, error) {
+func (brain *BrainEngine) Predict(user *models.User, message *models.Message) (string, error) {
 	// prompt := brain.prepareConversationPrompt(conversation, message)
 
 	// ctx := context.Background()
@@ -68,37 +64,34 @@ func (brain *BrainEngine) Predict(conversation *models.Conversation, message str
 	return "", nil
 }
 
-type MessageResponse struct {
-	PredictedResponse string
-	NewBuffer         string
-}
+func (brain *BrainEngine) ProcessMessageResponse(user *models.User, message *models.Message) (*models.Message, error) {
+	// predicted, err := brain.Predict(conversation, message)
+	// if err != nil {
+	// 	return nil, errors.WithStack(err)
+	// }
 
-func (brain *BrainEngine) ProcessMessageResponse(conversation *models.Conversation, message string) (*MessageResponse, error) {
-	predicted, err := brain.Predict(conversation, message)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	// newBuffer := fmt.Sprintf("%s\n%s:%s\n%s:%s",
+	// 	conversation.ConversationBuffer.String,
+	// 	conversation.UserName.String,
+	// 	message,
+	// 	brain.Name,
+	// 	predicted,
+	// )
 
-	newBuffer := fmt.Sprintf("%s\n%s:%s\n%s:%s",
-		conversation.ConversationBuffer.String,
-		conversation.UserName.String,
-		message,
-		brain.Name,
-		predicted,
-	)
+	// maxLines := 5
 
-	maxLines := 5
+	// lines := strings.Split(newBuffer, "\n")
 
-	lines := strings.Split(newBuffer, "\n")
+	// if len(lines) > maxLines {
+	// 	newBuffer = strings.Join(lines[len(lines)-maxLines:], "\n")
+	// } else {
+	// 	newBuffer = strings.Join(lines, "\n")
+	// }
 
-	if len(lines) > maxLines {
-		newBuffer = strings.Join(lines[len(lines)-maxLines:], "\n")
-	} else {
-		newBuffer = strings.Join(lines, "\n")
-	}
+	// return &MessageResponse{
+	// 	PredictedResponse: predicted,
+	// 	NewBuffer:         newBuffer,
+	// }, nil
 
-	return &MessageResponse{
-		PredictedResponse: predicted,
-		NewBuffer:         newBuffer,
-	}, nil
+	return nil, nil
 }

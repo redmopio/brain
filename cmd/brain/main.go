@@ -29,7 +29,7 @@ func main() {
 	ctx := context.Background()
 
 	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		response, err := brain.GenerateConversationResponse(ctx, sender.String(), message)
+		response, err := brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, sender.String(), message)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
@@ -43,7 +43,7 @@ func main() {
 
 	if config.TelegramAPIKey != "" {
 		telegramChannel := channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
-			return brain.GenerateConversationResponse(ctx, sender, message)
+			return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)
 		})
 
 		telegramChannel.Connect(ctx)
