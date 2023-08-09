@@ -14,14 +14,13 @@ import (
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
-  id, user_id, role, content, parent_id
+  user_id, role, content, parent_id
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4
 ) RETURNING id, created_at, updated_at, user_id, role, content, parent_id
 `
 
 type CreateMessageParams struct {
-	ID       uuid.UUID
 	UserID   uuid.NullUUID
 	Role     sql.NullString
 	Content  sql.NullString
@@ -30,7 +29,6 @@ type CreateMessageParams struct {
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
 	row := q.db.QueryRowContext(ctx, createMessage,
-		arg.ID,
 		arg.UserID,
 		arg.Role,
 		arg.Content,

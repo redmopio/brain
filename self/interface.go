@@ -36,14 +36,6 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 
 	fmt.Println("User:", user)
 
-	// conversation, err := brain.DatabaseClient.GetConversationByJid(ctx, sql.NullString{
-	// 	String: sender,
-	// 	Valid:  true,
-	// })
-	// if err != nil {
-	// 	return "", errors.WithStack(err)
-	// }
-
 	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, uuid.NullUUID{
 		UUID:  user.ID,
 		Valid: true,
@@ -67,18 +59,37 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		},
 	}
 
+	if len(lastMessages) > 0 {
+		inputMessage.ParentID = uuid.NullUUID{
+			UUID:  lastMessages[len(lastMessages)-1].ID,
+			Valid: true,
+		}
+	}
+
 	response, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, &inputMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	// brain.DatabaseClient.UpdateConversationBuffer(ctx, models.UpdateConversationBufferParams{
-	// 	ID: conversation.ID,
-	// 	ConversationBuffer: sql.NullString{
-	// 		String: response.NewBuffer,
-	// 		Valid:  true,
-	// 	},
-	// })
+	inputMessage, err = brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
+		UserID:   inputMessage.UserID,
+		Role:     inputMessage.Role,
+		Content:  inputMessage.Content,
+		ParentID: inputMessage.ParentID,
+	})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
 
-	return response.Content.String, nil
+	responseMessage, err := brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
+		UserID:   response.UserID,
+		Role:     response.Role,
+		Content:  response.Content,
+		ParentID: response.ParentID,
+	})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return responseMessage.Content.String, nil
 }
