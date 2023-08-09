@@ -66,17 +66,17 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		}
 	}
 
-	response, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, &inputMessage)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
 	inputMessage, err = brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID:   inputMessage.UserID,
 		Role:     inputMessage.Role,
 		Content:  inputMessage.Content,
 		ParentID: inputMessage.ParentID,
 	})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	response, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, &inputMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
