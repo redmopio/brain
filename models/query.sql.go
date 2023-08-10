@@ -49,7 +49,9 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 
 const getMessagesByUserID = `-- name: GetMessagesByUserID :many
 SELECT id, created_at, updated_at, user_id, role, content, parent_id FROM messages
-WHERE user_id = $1 LIMIT 20
+WHERE user_id = $1
+ORDER BY created_at ASC
+LIMIT 20
 `
 
 func (q *Queries) GetMessagesByUserID(ctx context.Context, userID uuid.NullUUID) ([]Message, error) {

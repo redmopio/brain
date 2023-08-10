@@ -1,7 +1,9 @@
 
 -- name: GetMessagesByUserID :many
 SELECT * FROM messages
-WHERE user_id = $1 LIMIT 20;
+WHERE user_id = $1
+ORDER BY created_at ASC
+LIMIT 20;
 
 -- name: CreateMessage :one
 INSERT INTO messages (
