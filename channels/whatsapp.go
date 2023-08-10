@@ -49,14 +49,14 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 		fmt.Println("Received a message:", message)
 		fmt.Println("Sender:", sender)
 
-		response, err := w.CalculateResponse(ctx, sender, message)
+		senderJID := sender.ToNonAD()
+		response, err := w.CalculateResponse(ctx, senderJID, message)
 		if err != nil {
 			panic(err)
 		}
 
 		msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
 
-		senderJID := sender.ToNonAD()
 		resp, err := w.client.SendMessage(context.Background(), senderJID, msg)
 		if err != nil {
 			panic(err)
