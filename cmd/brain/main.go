@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,10 +20,14 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("Brain Engine is starting...")
+
 	brain, err := self.NewBrainEngine(config)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("Brain Engine is ready to work!")
 
 	ctx := context.Background()
 
