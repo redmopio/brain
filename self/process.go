@@ -20,28 +20,28 @@ func (brain *BrainEngine) prepareMessagesForConversation(user models.User, lastM
 		Content: user.Context.String,
 	})
 
-	name := user.UserName.String
-	name = strings.ReplaceAll(name, " ", "_")
+	userName := user.UserName.String
+	userName = strings.ReplaceAll(userName, " ", "_")
 
 	for _, msg := range lastMessages {
+		messageName := userName
 		role := openai.ChatMessageRoleUser
-		currentName := name
 
 		if msg.Role.String == openai.ChatMessageRoleAssistant {
 			role = openai.ChatMessageRoleAssistant
-			currentName = ""
+			messageName = ""
 		}
 
 		messages = append(messages, openai.ChatCompletionMessage{
+			Name:    messageName,
 			Role:    role,
-			Name:    currentName,
 			Content: msg.Content.String,
 		})
 	}
 
 	messages = append(messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
-		Name:    name,
+		Name:    userName,
+		Role:    inputMessage.Role.String,
 		Content: inputMessage.Content.String,
 	})
 
@@ -51,10 +51,10 @@ func (brain *BrainEngine) prepareMessagesForConversation(user models.User, lastM
 func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*models.Message, error) {
 	messages := brain.prepareMessagesForConversation(user, lastMessages, inputMessage)
 
-	fmt.Printf("Size of messages: %d\n", len(messages))
+	fmt.Printf("Total messages: %d\n", len(messages))
 
 	for _, msg := range messages {
-		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, msg.Content)
+		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, msg.Content[:100])
 	}
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{

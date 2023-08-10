@@ -34,7 +34,7 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		}
 	}
 
-	fmt.Println("User:", user)
+	fmt.Println("User: ", user.UserName.String)
 
 	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, uuid.NullUUID{
 		UUID:  user.ID,
@@ -75,6 +75,8 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+
+	fmt.Printf("Input message [%s]: %s\n", inputMessage.Role.String, inputMessage.Content.String)
 
 	response, err := brain.ProcessMessageResponse(ctx, user, lastMessages, inputMessage)
 	if err != nil {
