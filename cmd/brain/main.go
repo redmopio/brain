@@ -20,6 +20,8 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("Brain Engine is starting...")
+
 	brain, err := self.NewBrainEngine(config)
 	if err != nil {
 		panic(err)
