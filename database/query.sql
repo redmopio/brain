@@ -2,8 +2,7 @@
 -- name: GetMessagesByUserID :many
 SELECT * FROM messages
 WHERE user_id = $1
-ORDER BY created_at ASC
-LIMIT 20;
+ORDER BY created_at ASC;
 
 -- name: CreateMessage :one
 INSERT INTO messages (
