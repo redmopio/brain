@@ -12,7 +12,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) prepareMessagesForConversation(user *models.User, lastMessages []models.Message, message *models.Message) []openai.ChatCompletionMessage {
+func (brain *BrainEngine) prepareMessagesForConversation(user models.User, lastMessages []models.Message, inputMessage models.Message) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
@@ -20,29 +20,36 @@ func (brain *BrainEngine) prepareMessagesForConversation(user *models.User, last
 		Content: user.Context.String,
 	})
 
+	name := user.UserName.String
+	name = strings.ReplaceAll(name, " ", "_")
+
 	for _, msg := range lastMessages {
 		role := openai.ChatMessageRoleUser
-		name := user.UserName.String
+		currentName := name
 
 		if msg.Role.String == openai.ChatMessageRoleAssistant {
 			role = openai.ChatMessageRoleAssistant
-			name = ""
+			currentName = ""
 		}
-
-		name = strings.ReplaceAll(name, " ", "_")
 
 		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    role,
-			Name:    name,
+			Name:    currentName,
 			Content: msg.Content.String,
 		})
 	}
 
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Name:    name,
+		Content: inputMessage.Content.String,
+	})
+
 	return messages
 }
 
-func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *models.User, lastMessages []models.Message, message *models.Message) (*models.Message, error) {
-	messages := brain.prepareMessagesForConversation(user, lastMessages, message)
+func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*models.Message, error) {
+	messages := brain.prepareMessagesForConversation(user, lastMessages, inputMessage)
 
 	fmt.Printf("Size of messages: %d\n", len(messages))
 
@@ -72,7 +79,7 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *mode
 			Valid: true,
 		},
 		ParentID: uuid.NullUUID{
-			UUID:  message.ID,
+			UUID:  inputMessage.ID,
 			Valid: true,
 		},
 	}

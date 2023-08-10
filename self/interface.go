@@ -76,7 +76,7 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	response, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, &inputMessage)
+	response, err := brain.ProcessMessageResponse(ctx, user, lastMessages, inputMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
