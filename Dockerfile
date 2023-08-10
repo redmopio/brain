@@ -13,6 +13,9 @@ RUN go mod download
 # Builds your app with optional configuration
 RUN go build ./cmd/brain
 
+# Create a directory to hold sqlite databases
+RUN mkdir -p /app/data
+
 # Tells Docker which network port your container listens on
 EXPOSE 8080
 
