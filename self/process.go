@@ -54,7 +54,7 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user model
 	fmt.Printf("Total messages: %d\n", len(messages))
 
 	for _, msg := range messages {
-		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, msg.Content)
+		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, firstN(msg.Content, 100))
 	}
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
