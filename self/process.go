@@ -12,7 +12,45 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*openai.ChatCompletionResponse, error) {
+func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (string, error) {
+	greetingKeywords := []string{"hola", "hello", "hi", "hey"}
+	helpKeywords := []string{"ayuda", "help"}
+	byeKeywords := []string{"adios", "bye"}
+	thanksKeywords := []string{"gracias", "thanks"}
+
+	for _, keyword := range greetingKeywords {
+		if strings.Contains(strings.ToLower(inputMessage.Content.String), keyword) {
+			return "Hola, soy el asistente virtual de la Universidad de los Andes. ¿En qué puedo ayudarte?", nil
+		}
+	}
+
+	for _, keyword := range helpKeywords {
+		if strings.Contains(strings.ToLower(inputMessage.Content.String), keyword) {
+			return "Puedes preguntarme por los servicios que ofrece la universidad, por ejemplo: ¿Qué es el centro de idiomas?", nil
+		}
+	}
+
+	for _, keyword := range byeKeywords {
+		if strings.Contains(strings.ToLower(inputMessage.Content.String), keyword) {
+			return "¡Hasta pronto!", nil
+		}
+	}
+
+	for _, keyword := range thanksKeywords {
+		if strings.Contains(strings.ToLower(inputMessage.Content.String), keyword) {
+			return "¡De nada!", nil
+		}
+	}
+
+	openAiResponse, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return openAiResponse.Choices[0].Message.Content, nil
+}
+
+func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*openai.ChatCompletionResponse, error) {
 	messages := brain.prepareMessagesForConversation(user, lastMessages, inputMessage)
 
 	fmt.Printf("Total messages: %d\n", len(messages))

@@ -49,13 +49,13 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	openAiResponse, err := brain.ProcessMessageResponse(ctx, user, lastMessages, userMessage)
+	brainMessage, err := brain.ProcessMessageResponse(ctx, user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	openAiMessage := buildChatbotMessage(user.ID, openAiResponse.Choices[0].Message.Content, userMessage.ID)
-	responseMessage, err := brain.storeMessage(ctx, &openAiMessage)
+	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID)
+	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
