@@ -13,6 +13,7 @@ type Config struct {
 	WhatsAppDisabled     bool   `envconfig:"whatsapp_disabled" default:"false"`
 	WhatsAppDatabaseName string `envconfig:"whatsapp_database_name" default:"whatsapp-store.db"`
 	TelegramAPIKey       string `envconfig:"telegram_api_key" default:""`
+	HasuraToken          string `envconfig:"hasura_token" default:""`
 }
 
 func NewLoadedConfig() (*Config, error) {
