@@ -24,7 +24,8 @@ CREATE TABLE messages (
     role       text,
     content    text,
 
-    parent_id  uuid NULL default NULL references messages(id) ON DELETE SET NULL
+    parent_id  uuid NULL default NULL references messages(id) ON DELETE SET NULL,
+    agent_id   uuid NULL default NULL references agents(id) ON DELETE SET NULL
 );
 
 CREATE TYPE agent_type AS ENUM (
@@ -40,8 +41,8 @@ CREATE TABLE agents (
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
 
-    name        agent_type not null,
-    description text       not null
+    name         text not null,
+    constitution text not null
 );
 
-CREATE INDEX agents_name_idx ON agents (name);
+CREATE UNIQUE INDEX agents_name_idx ON agents (name);

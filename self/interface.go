@@ -49,12 +49,12 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	brainMessage, err := brain.ProcessMessageResponse(ctx, user, lastMessages, userMessage)
+	brainMessage, agent, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID)
+	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID, agent)
 	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)

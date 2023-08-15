@@ -14,10 +14,10 @@ import (
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
-  user_id, role, content, parent_id
+  user_id, role, content, parent_id, agent_id
 ) VALUES (
-  $1, $2, $3, $4
-) RETURNING id, created_at, updated_at, user_id, role, content, parent_id
+  $1, $2, $3, $4, $5
+) RETURNING id, created_at, updated_at, user_id, role, content, parent_id, agent_id
 `
 
 type CreateMessageParams struct {
@@ -25,6 +25,7 @@ type CreateMessageParams struct {
 	Role     sql.NullString
 	Content  sql.NullString
 	ParentID uuid.NullUUID
+	AgentID  uuid.NullUUID
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		arg.Role,
 		arg.Content,
 		arg.ParentID,
+		arg.AgentID,
 	)
 	var i Message
 	err := row.Scan(
@@ -43,16 +45,17 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.Role,
 		&i.Content,
 		&i.ParentID,
+		&i.AgentID,
 	)
 	return i, err
 }
 
 const getAgentByName = `-- name: GetAgentByName :one
-SELECT id, created_at, updated_at, name, description FROM agents
+SELECT id, created_at, updated_at, name, constitution FROM agents
 WHERE name = $1 LIMIT 1
 `
 
-func (q *Queries) GetAgentByName(ctx context.Context, name AgentType) (Agent, error) {
+func (q *Queries) GetAgentByName(ctx context.Context, name string) (Agent, error) {
 	row := q.db.QueryRowContext(ctx, getAgentByName, name)
 	var i Agent
 	err := row.Scan(
@@ -60,34 +63,50 @@ func (q *Queries) GetAgentByName(ctx context.Context, name AgentType) (Agent, er
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
-		&i.Description,
+		&i.Constitution,
 	)
 	return i, err
 }
 
 const getMessagesByUserID = `-- name: GetMessagesByUserID :many
-SELECT id, created_at, updated_at, user_id, role, content, parent_id FROM messages
-WHERE user_id = $1
-ORDER BY created_at ASC
+SELECT m.id, m.user_id, m.role, m.content, m.parent_id, m.agent_id, u.user_name as username
+FROM (
+  SELECT id, user_id, role, content, parent_id, agent_id, created_at
+    FROM messages
+    WHERE user_id = $1
+) m
+JOIN users u
+ON m.user_id = u.id
+ORDER BY m.created_at ASC
 `
 
-func (q *Queries) GetMessagesByUserID(ctx context.Context, userID uuid.NullUUID) ([]Message, error) {
+type GetMessagesByUserIDRow struct {
+	ID       uuid.UUID
+	UserID   uuid.NullUUID
+	Role     sql.NullString
+	Content  sql.NullString
+	ParentID uuid.NullUUID
+	AgentID  uuid.NullUUID
+	Username sql.NullString
+}
+
+func (q *Queries) GetMessagesByUserID(ctx context.Context, userID uuid.NullUUID) ([]GetMessagesByUserIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, getMessagesByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []GetMessagesByUserIDRow
 	for rows.Next() {
-		var i Message
+		var i GetMessagesByUserIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 			&i.UserID,
 			&i.Role,
 			&i.Content,
 			&i.ParentID,
+			&i.AgentID,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}

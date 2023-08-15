@@ -57,11 +57,11 @@ func (ns NullAgentType) Value() (driver.Value, error) {
 }
 
 type Agent struct {
-	ID          uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Name        AgentType
-	Description string
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Name         string
+	Constitution string
 }
 
 type Message struct {
@@ -72,6 +72,7 @@ type Message struct {
 	Role      sql.NullString
 	Content   sql.NullString
 	ParentID  uuid.NullUUID
+	AgentID   uuid.NullUUID
 }
 
 type User struct {

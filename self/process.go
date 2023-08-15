@@ -13,10 +13,10 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (string, error) {
-	openAiResponse, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
+func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
+	openAiResponse, agent, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", nil, errors.WithStack(err)
 	}
 
 	responseWithDataKeywords := []string{"tus datos han sido registrados de manera exitosa"}
@@ -24,16 +24,16 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user model
 
 	for _, keyword := range responseWithDataKeywords {
 		if strings.Contains(strings.ToLower(openAiMessageContent), keyword) {
-			parsedDataFromOpenAI, err := brain.processDataMessageWithOpenAI(ctx, user, openAiMessageContent)
+			parsedDataFromOpenAI, agent, err := brain.processDataMessageWithOpenAI(ctx, user, openAiMessageContent)
 			if err != nil {
 				fmt.Printf("Error processing data message: %s\n", err.Error())
-				return "", errors.WithStack(err)
+				return "", nil, errors.WithStack(err)
 			}
 
 			parsedDataFromOpenAIContent := parsedDataFromOpenAI.Choices[0].Message.Content
 
 			if strings.Contains(parsedDataFromOpenAIContent, "Hubo un error al parsear la data") {
-				return "Disculpa, creo que no ingresaste todos los datos. Revisa el ejemplo y vuelve a intentarlo.", nil
+				return "Disculpa, creo que no ingresaste todos los datos. Revisa el ejemplo y vuelve a intentarlo.", nil, nil
 			}
 
 			// parse content from openAiResponse to DataStruct
@@ -41,49 +41,48 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user model
 			err = json.Unmarshal([]byte(parsedDataFromOpenAI.Choices[0].Message.Content), &data)
 			if err != nil {
 				fmt.Printf("Error parsing data: %s\n", err.Error())
-				return "Disculpa, creo que no ingresaste todos los datos. Revisa el ejemplo y vuelve a intentarlo.", nil
+				return "Disculpa, creo que no ingresaste todos los datos. Revisa el ejemplo y vuelve a intentarlo.", nil, nil
 			}
 
 			fmt.Printf("\t -> Calling Hasura endpoint with data: %s\n", parsedDataFromOpenAIContent)
 			_, err = brain.callHasuraEndpoint(parsedDataFromOpenAIContent)
 			if err != nil {
-				return "Lo siento, hubo un error al guardar tus datos. Por favor, intentalo nuevamente en unos minutos.", nil
+				return "Lo siento, hubo un error al guardar tus datos. Por favor, intentalo nuevamente en unos minutos.", nil, nil
 			}
 
-			return openAiMessageContent, nil
+			return openAiMessageContent, agent, nil
 		}
 	}
 
 	fmt.Printf("\t -> Processing normal message: %s\n", openAiMessageContent)
 
-	return openAiMessageContent, nil
+	return openAiMessageContent, agent, nil
 }
 
-func (brain *BrainEngine) processDataMessageWithOpenAI(ctx context.Context, user models.User, messageContent string) (*openai.ChatCompletionResponse, error) {
-	agentParseData, err := brain.getAgent(ctx, models.AgentTypeAgentParseData)
+func (brain *BrainEngine) processDataMessageWithOpenAI(ctx context.Context, user *models.User, messageContent string) (*openai.ChatCompletionResponse, *models.Agent, error) {
+	agentWriteParseData, err := brain.getAgent(ctx, string(AgentNameAgentWriteParseData))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
-
-	messages := brain.prepareOpenAiMessagesForData(&agentParseData, messageContent)
+	messages := brain.prepareMessagesForConversation(&agentWriteParseData, messageContent, nil, []models.GetMessagesByUserIDRow{})
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
 		Messages: messages,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
-	return &response, nil
+	return &response, &agentWriteParseData, nil
 }
 
-func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*openai.ChatCompletionResponse, error) {
-	agentStoreData, err := brain.getAgent(ctx, models.AgentTypeAgentStoreData)
+func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
+	agentWriteStoreData, err := brain.getAgent(ctx, string(AgentNameAgentWriteStoreData))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
-	messages := brain.prepareMessagesForConversation(&agentStoreData, user, lastMessages, inputMessage)
+	messages := brain.prepareMessagesForConversation(&agentWriteStoreData, inputMessage.Content.String, user, lastMessages)
 
 	fmt.Printf("Total messages: %d\n", len(messages))
 
@@ -96,25 +95,23 @@ func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user mod
 		Messages: messages,
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
-	return &response, nil
+	return &response, &agentWriteStoreData, nil
 }
 
-func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, user models.User, lastMessages []models.Message, inputMessage models.Message) []openai.ChatCompletionMessage {
+func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleSystem,
-		Content: agent.Description,
+		Content: agent.Constitution,
 	})
 
-	userName := user.UserName.String
-	userName = strings.ReplaceAll(userName, " ", "_")
-
 	for _, msg := range lastMessages {
-		messageName := userName
+		messageName := msg.Username.String
+		messageName = strings.ReplaceAll(messageName, " ", "_")
 		role := openai.ChatMessageRoleUser
 
 		if msg.Role.String == openai.ChatMessageRoleAssistant {
@@ -129,32 +126,24 @@ func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, us
 		})
 	}
 
-	messages = append(messages, openai.ChatCompletionMessage{
-		Name:    userName,
-		Role:    inputMessage.Role.String,
-		Content: inputMessage.Content.String,
-	})
-
-	return messages
-}
-
-func (brain *BrainEngine) prepareOpenAiMessagesForData(agent *models.Agent, messageContent string) []openai.ChatCompletionMessage {
-	messages := []openai.ChatCompletionMessage{}
-
-	messages = append(messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: agent.Description,
-	})
-
-	messages = append(messages, openai.ChatCompletionMessage{
+	lastMessageToAppend := openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: messageContent,
-	})
+	}
+
+	if user != nil {
+		userName := user.UserName.String
+		userName = strings.ReplaceAll(userName, " ", "_")
+
+		lastMessageToAppend.Name = userName
+	}
+
+	messages = append(messages, lastMessageToAppend)
 
 	return messages
 }
 
-func (brain *BrainEngine) getAgent(ctx context.Context, agentName models.AgentType) (models.Agent, error) {
+func (brain *BrainEngine) getAgent(ctx context.Context, agentName string) (models.Agent, error) {
 	agent, err := brain.DatabaseClient.GetAgentByName(ctx, agentName)
 	if err != nil {
 		return models.Agent{}, errors.WithStack(err)
@@ -171,6 +160,7 @@ func (brain *BrainEngine) storeMessage(ctx context.Context, message *models.Mess
 		Role:     message.Role,
 		Content:  message.Content,
 		ParentID: message.ParentID,
+		AgentID:  message.AgentID,
 	})
 	if err != nil {
 		return models.Message{}, errors.WithStack(err)
@@ -181,7 +171,7 @@ func (brain *BrainEngine) storeMessage(ctx context.Context, message *models.Mess
 	return storedMessage, nil
 }
 
-func buildUserMessage(userId uuid.UUID, messageContent string, lastMessages []models.Message) models.Message {
+func buildUserMessage(userId uuid.UUID, messageContent string, lastMessages []models.GetMessagesByUserIDRow) models.Message {
 	userMessage := models.Message{
 		Role:    sql.NullString{String: openai.ChatMessageRoleUser, Valid: true},
 		UserID:  uuid.NullUUID{UUID: userId, Valid: true},
@@ -195,12 +185,16 @@ func buildUserMessage(userId uuid.UUID, messageContent string, lastMessages []mo
 	return userMessage
 }
 
-func buildChatbotMessage(userId uuid.UUID, messageContent string, parentId uuid.UUID) models.Message {
+func buildChatbotMessage(userId uuid.UUID, messageContent string, parentId uuid.UUID, agent *models.Agent) models.Message {
 	responseMessage := models.Message{
 		Role:     sql.NullString{String: openai.ChatMessageRoleAssistant, Valid: true},
 		UserID:   uuid.NullUUID{UUID: userId, Valid: true},
 		Content:  sql.NullString{String: messageContent, Valid: true},
 		ParentID: uuid.NullUUID{UUID: parentId, Valid: true},
+	}
+
+	if agent != nil {
+		responseMessage.AgentID = uuid.NullUUID{UUID: agent.ID, Valid: true}
 	}
 
 	return responseMessage
