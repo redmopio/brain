@@ -60,29 +60,12 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user model
 }
 
 func (brain *BrainEngine) processDataMessageWithOpenAI(ctx context.Context, user models.User, messageContent string) (*openai.ChatCompletionResponse, error) {
-	openAiContext := `El siguiente mensaje es un listado de datos climáticos del proyecto Redmop. Redmop es un sistema de monitoreo climático distribuido que utiliza una red de voluntarios para recopilar datos sobre las condiciones meteorológicas en una zona geográfica específica. Los datos que el mensaje debe contener son:
-- Código de la estación (ej.: RC-Cy-CP-34)
-- Quebrada y distrito (ej.: CULTURA Y PROGRESO CHACLACAYO)
-- Intensidad de la lluvia (en una escala de 1 a 5, ej.: 3)
-- Nivel de lluvia acumulada (en mm, ej.: 0.5mm)
-- Tiempo actual (ej.: Cielo nublado sigue llovizna)
-- Fecha y hora de la revisión del pluviómetro (ej.: 09-06-2023 7:31am)
+	agentParseData, err := brain.getAgent(ctx, models.AgentTypeAgentParseData)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-Si no se puede parsear la información, responde solo el string "Hubo un error al parsear la data".
-
-No añadas explicación, solo los datos.
-La respuesta debe ser en formato JSON, con los siguientes campos:
-- "station_code": string,
-- "stream_name": string,
-- "rain_intensity": int,
-- "rain_level": float,
-- "current_weather": string,
-- "date_time": string (ISO format)
-
-Si se puede parsear, pero tiene campos incompletos, genera un JSON con los campos faltantes como "null",
-`
-
-	messages := brain.prepareOpenAiMessagesForData(openAiContext, messageContent)
+	messages := brain.prepareOpenAiMessagesForData(&agentParseData, messageContent)
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
@@ -96,7 +79,11 @@ Si se puede parsear, pero tiene campos incompletos, genera un JSON con los campo
 }
 
 func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user models.User, lastMessages []models.Message, inputMessage models.Message) (*openai.ChatCompletionResponse, error) {
-	messages := brain.prepareMessagesForConversation(user, lastMessages, inputMessage)
+	agentStoreData, err := brain.getAgent(ctx, models.AgentTypeAgentStoreData)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	messages := brain.prepareMessagesForConversation(&agentStoreData, user, lastMessages, inputMessage)
 
 	fmt.Printf("Total messages: %d\n", len(messages))
 
@@ -115,12 +102,12 @@ func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user mod
 	return &response, nil
 }
 
-func (brain *BrainEngine) prepareMessagesForConversation(user models.User, lastMessages []models.Message, inputMessage models.Message) []openai.ChatCompletionMessage {
+func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, user models.User, lastMessages []models.Message, inputMessage models.Message) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleSystem,
-		Content: user.Context.String,
+		Content: agent.Description,
 	})
 
 	userName := user.UserName.String
@@ -151,12 +138,12 @@ func (brain *BrainEngine) prepareMessagesForConversation(user models.User, lastM
 	return messages
 }
 
-func (brain *BrainEngine) prepareOpenAiMessagesForData(systemContext string, messageContent string) []openai.ChatCompletionMessage {
+func (brain *BrainEngine) prepareOpenAiMessagesForData(agent *models.Agent, messageContent string) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleSystem,
-		Content: systemContext,
+		Content: agent.Description,
 	})
 
 	messages = append(messages, openai.ChatCompletionMessage{
@@ -165,6 +152,17 @@ func (brain *BrainEngine) prepareOpenAiMessagesForData(systemContext string, mes
 	})
 
 	return messages
+}
+
+func (brain *BrainEngine) getAgent(ctx context.Context, agentName models.AgentType) (models.Agent, error) {
+	agent, err := brain.DatabaseClient.GetAgentByName(ctx, agentName)
+	if err != nil {
+		return models.Agent{}, errors.WithStack(err)
+	}
+
+	fmt.Printf("Agent: %s\n", agent.Name)
+
+	return agent, nil
 }
 
 func (brain *BrainEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
