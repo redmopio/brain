@@ -27,3 +27,15 @@ CREATE TABLE messages (
     parent_id  uuid NULL default NULL references messages(id) ON DELETE SET NULL
 );
 
+
+CREATE TABLE agents (
+    id         uuid default gen_random_uuid() not null primary key,
+
+    created_at timestamp with time zone default now() not null,
+    updated_at timestamp with time zone default now() not null,
+
+    name        text not null,
+    description text not null
+);
+
+CREATE INDEX agents_name_idx ON agents (name);

@@ -11,6 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type Agent struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Name        string
+	Description string
+}
+
 type Message struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
