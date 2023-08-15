@@ -52,7 +52,7 @@ SELECT id, created_at, updated_at, name, description FROM agents
 WHERE name = $1 LIMIT 1
 `
 
-func (q *Queries) GetAgentByName(ctx context.Context, name string) (Agent, error) {
+func (q *Queries) GetAgentByName(ctx context.Context, name AgentType) (Agent, error) {
 	row := q.db.QueryRowContext(ctx, getAgentByName, name)
 	var i Agent
 	err := row.Scan(

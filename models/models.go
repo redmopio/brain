@@ -6,16 +6,61 @@ package models
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+type AgentType string
+
+const (
+	AgentTypeDefault        AgentType = "default"
+	AgentTypeAgentStoreData AgentType = "agent_store_data"
+	AgentTypeAgentParseData AgentType = "agent_parse_data"
+)
+
+func (e *AgentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AgentType(s)
+	case string:
+		*e = AgentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AgentType: %T", src)
+	}
+	return nil
+}
+
+type NullAgentType struct {
+	AgentType AgentType
+	Valid     bool // Valid is true if AgentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAgentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AgentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AgentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAgentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AgentType), nil
+}
+
 type Agent struct {
 	ID          uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	Name        string
+	Name        AgentType
 	Description string
 }
 
