@@ -9,7 +9,6 @@ import (
 	"github.com/minskylab/brain/channels"
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
-	"github.com/sashabaranov/go-openai"
 )
 
 func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelType, sender string, message string) (string, error) {
@@ -34,7 +33,7 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		}
 	}
 
-	fmt.Println("User:", user)
+	fmt.Println("User: ", user.UserName.String)
 
 	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, uuid.NullUUID{
 		UUID:  user.ID,
@@ -44,49 +43,19 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	inputMessage := models.Message{
-		UserID: uuid.NullUUID{
-			UUID:  user.ID,
-			Valid: true,
-		},
-		Content: sql.NullString{
-			String: message,
-			Valid:  true,
-		},
-		Role: sql.NullString{
-			String: openai.ChatMessageRoleUser,
-			Valid:  true,
-		},
-	}
-
-	if len(lastMessages) > 0 {
-		inputMessage.ParentID = uuid.NullUUID{
-			UUID:  lastMessages[len(lastMessages)-1].ID,
-			Valid: true,
-		}
-	}
-
-	inputMessage, err = brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
-		UserID:   inputMessage.UserID,
-		Role:     inputMessage.Role,
-		Content:  inputMessage.Content,
-		ParentID: inputMessage.ParentID,
-	})
+	userMessage := buildUserMessage(user.ID, message, lastMessages)
+	userMessage, err = brain.storeMessage(ctx, &userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	response, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, &inputMessage)
+	brainMessage, err := brain.ProcessMessageResponse(ctx, user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	responseMessage, err := brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
-		UserID:   response.UserID,
-		Role:     response.Role,
-		Content:  response.Content,
-		ParentID: response.ParentID,
-	})
+	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID)
+	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

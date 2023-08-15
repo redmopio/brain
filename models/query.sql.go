@@ -47,6 +47,24 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	return i, err
 }
 
+const getAgentByName = `-- name: GetAgentByName :one
+SELECT id, created_at, updated_at, name, description FROM agents
+WHERE name = $1 LIMIT 1
+`
+
+func (q *Queries) GetAgentByName(ctx context.Context, name AgentType) (Agent, error) {
+	row := q.db.QueryRowContext(ctx, getAgentByName, name)
+	var i Agent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Description,
+	)
+	return i, err
+}
+
 const getMessagesByUserID = `-- name: GetMessagesByUserID :many
 SELECT id, created_at, updated_at, user_id, role, content, parent_id FROM messages
 WHERE user_id = $1

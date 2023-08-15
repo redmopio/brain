@@ -45,20 +45,20 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 
 		ctx := context.Background()
 		sender := v.Info.Sender
-		message := v.Message.GetConversation()
+		userMessage := v.Message.GetConversation()
 
-		fmt.Println("Received a message:", message)
+		fmt.Println("Received a message:", userMessage)
 		fmt.Println("Sender:", sender)
 
 		senderJID := sender.ToNonAD()
-		response, err := w.response(ctx, senderJID, message)
+		response, err := w.response(ctx, senderJID, userMessage)
 		if err != nil {
 			panic(err)
 		}
 
-		msg := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
+		botMessage := &waProto.Message{Conversation: proto.String(strings.Join([]string{response}, " "))}
 
-		resp, err := w.client.SendMessage(context.Background(), senderJID, msg)
+		resp, err := w.client.SendMessage(context.Background(), senderJID, botMessage)
 		if err != nil {
 			panic(err)
 		}

@@ -20,3 +20,7 @@ WHERE jid = $1 LIMIT 1;
 -- name: GetUserByTelegramID :one
 SELECT * FROM users
 WHERE telegram_id = $1 LIMIT 1;
+
+-- name: GetAgentByName :one
+SELECT * FROM agents
+WHERE name = $1 LIMIT 1;

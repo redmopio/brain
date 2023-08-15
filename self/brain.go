@@ -18,6 +18,7 @@ type BrainEngine struct {
 	DatabaseClient *models.Queries
 	LLMEngine      *llm.LLMEngine
 	Name           string
+	HasuraToken    string
 }
 
 func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
@@ -68,5 +69,6 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 		DatabaseClient: client,
 		LLMEngine:      llmEngine,
 		Name:           config.Name,
+		HasuraToken:    config.HasuraToken,
 	}, nil
 }
