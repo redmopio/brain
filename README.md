@@ -18,3 +18,8 @@ cp .env.example .env
 # Run
 go run ./cmd/brain
 ```
+
+## TODO
+
+- [ ] Add timeouts and cancellations
+- [ ] Create groups table
