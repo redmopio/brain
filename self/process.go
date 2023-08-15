@@ -109,7 +109,8 @@ func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, me
 		Content: agent.Constitution,
 	})
 
-	for _, msg := range lastMessages {
+	for i := len(lastMessages) - 1; i >= 0; i-- {
+		msg := lastMessages[i]
 		messageName := msg.Username.String
 		messageName = strings.ReplaceAll(messageName, " ", "_")
 		role := openai.ChatMessageRoleUser

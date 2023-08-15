@@ -77,8 +77,13 @@ FROM (
 ) m
 JOIN users u
 ON m.user_id = u.id
-ORDER BY m.created_at ASC
+ORDER BY m.created_at DESC LIMIT $2
 `
+
+type GetMessagesByUserIDParams struct {
+	UserID uuid.NullUUID
+	Limit  int32
+}
 
 type GetMessagesByUserIDRow struct {
 	ID       uuid.UUID
@@ -90,8 +95,8 @@ type GetMessagesByUserIDRow struct {
 	Username sql.NullString
 }
 
-func (q *Queries) GetMessagesByUserID(ctx context.Context, userID uuid.NullUUID) ([]GetMessagesByUserIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMessagesByUserID, userID)
+func (q *Queries) GetMessagesByUserID(ctx context.Context, arg GetMessagesByUserIDParams) ([]GetMessagesByUserIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMessagesByUserID, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

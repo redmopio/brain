@@ -35,9 +35,9 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 
 	fmt.Println("User: ", user.UserName.String)
 
-	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, uuid.NullUUID{
-		UUID:  user.ID,
-		Valid: true,
+	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, models.GetMessagesByUserIDParams{
+		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
+		Limit:  20,
 	})
 	if err != nil {
 		return "", errors.WithStack(err)

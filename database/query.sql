@@ -7,7 +7,7 @@ FROM (
 ) m
 JOIN users u
 ON m.user_id = u.id
-ORDER BY m.created_at ASC;
+ORDER BY m.created_at DESC LIMIT $2;
 
 -- name: CreateMessage :one
 INSERT INTO messages (
