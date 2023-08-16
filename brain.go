@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/minskylab/brain/channels"
+	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/models"
 	"github.com/minskylab/brain/self"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -30,7 +32,7 @@ type Channel struct {
 type Brain struct {
 	System   *self.SystemEngine
 	Agents   map[string]Agent
-	Channels channels.Channel
+	Channels map[string]channels.Channel
 }
 
 type Message struct {
@@ -52,4 +54,47 @@ func (b *Brain) Interact(ctx context.Context, agentName string, messages []Messa
 	// b.System.GenerateConversationResponse(ctx)
 
 	return nil, nil
+}
+
+func NewBrain(ctx context.Context, config *config.Config) (*Brain, error) {
+	system, err := self.NewBrainEngine(config)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	registeredAgents, err := system.DatabaseClient.GetAllAgents(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	agents := map[string]Agent{}
+	for _, agent := range registeredAgents {
+		agents[agent.Name] = Agent{
+			ID:           agent.ID.String(),
+			Name:         agent.Name,
+			Constitution: agent.Constitution,
+		}
+	}
+
+	return &Brain{
+		System:   system,
+		Agents:   map[string]Agent{},
+		Channels: map[string]channels.Channel{},
+	}, nil
+}
+
+func (b *Brain) RegisterChannel(channel channels.Channel) {
+	b.Channels[string(channel.Name())] = channel
+}
+
+func (b *Brain) RegisterBeforeResponseFunction(agentName string, f AgentBeforeResponseFunction) {
+	b.Agents[agentName] = Agent{
+		BeforeResponse: f,
+	}
+}
+
+func (b *Brain) RegisterAfterResponseFunction(agentName string, f AgentAfterResponseFunction) {
+	b.Agents[agentName] = Agent{
+		AfterResponse: f,
+	}
 }

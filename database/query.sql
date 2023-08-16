@@ -29,3 +29,7 @@ WHERE telegram_id = $1 LIMIT 1;
 -- name: GetAgentByName :one
 SELECT * FROM agents
 WHERE name = $1 LIMIT 1;
+
+
+-- name: GetAllAgents :many
+SELECT * FROM agents;

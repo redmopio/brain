@@ -28,12 +28,6 @@ CREATE TABLE messages (
     agent_id   uuid NULL default NULL references agents(id) ON DELETE SET NULL
 );
 
-CREATE TYPE agent_type AS ENUM (
-  'default',
-  'agent_store_data',
-  'agent_parse_data'
-);
-
 
 CREATE TABLE agents (
     id         uuid default gen_random_uuid() not null primary key,
