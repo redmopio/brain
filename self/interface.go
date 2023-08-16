@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelType, sender string, message string) (string, error) {
+func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
 	var user models.User
 	var err error
 
@@ -49,7 +49,7 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	brainMessage, agent, err := brain.ProcessMessageResponse(ctx, &user, lastMessages, userMessage)
+	brainMessage, agent, err := brain.processMessageResponse(ctx, &user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

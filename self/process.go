@@ -13,7 +13,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
+func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
 	openAiResponse, agent, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
@@ -59,7 +59,7 @@ func (brain *BrainEngine) ProcessMessageResponse(ctx context.Context, user *mode
 	return openAiMessageContent, agent, nil
 }
 
-func (brain *BrainEngine) processDataMessageWithOpenAI(ctx context.Context, user *models.User, messageContent string) (*openai.ChatCompletionResponse, *models.Agent, error) {
+func (brain *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, user *models.User, messageContent string) (*openai.ChatCompletionResponse, *models.Agent, error) {
 	agentWriteParseData, err := brain.getAgent(ctx, string(AgentNameAgentWriteParseData))
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -77,7 +77,7 @@ func (brain *BrainEngine) processDataMessageWithOpenAI(ctx context.Context, user
 	return &response, &agentWriteParseData, nil
 }
 
-func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
+func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
 	agentWriteStoreData, err := brain.getAgent(ctx, string(AgentNameAgentWriteStoreData))
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -101,7 +101,7 @@ func (brain *BrainEngine) processMessageWithOpenAI(ctx context.Context, user *mo
 	return &response, &agentWriteStoreData, nil
 }
 
-func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
+func (brain *SystemEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
@@ -144,7 +144,7 @@ func (brain *BrainEngine) prepareMessagesForConversation(agent *models.Agent, me
 	return messages
 }
 
-func (brain *BrainEngine) getAgent(ctx context.Context, agentName string) (models.Agent, error) {
+func (brain *SystemEngine) getAgent(ctx context.Context, agentName string) (models.Agent, error) {
 	agent, err := brain.DatabaseClient.GetAgentByName(ctx, agentName)
 	if err != nil {
 		return models.Agent{}, errors.WithStack(err)
@@ -155,7 +155,7 @@ func (brain *BrainEngine) getAgent(ctx context.Context, agentName string) (model
 	return agent, nil
 }
 
-func (brain *BrainEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
+func (brain *SystemEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
 	storedMessage, err := brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID:   message.UserID,
 		Role:     message.Role,

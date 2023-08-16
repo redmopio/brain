@@ -15,7 +15,7 @@ type DataStruct struct {
 	Datetime       string  `json:"date_time"`
 }
 
-func (b *BrainEngine) callHasuraEndpoint(bodyContent string) (bool, error) {
+func (b *SystemEngine) callHasuraEndpoint(bodyContent string) (bool, error) {
 	// HTTP endpoint
 	posturl := "https://redmop.practical-action.minsky.cc/api/rest/v1/instrument-records"
 
@@ -29,7 +29,7 @@ func (b *BrainEngine) callHasuraEndpoint(bodyContent string) (bool, error) {
 	}
 
 	r.Header.Add("Content-Type", "application/json")
-	r.Header.Add("x-hasura-admin-secret", b.HasuraToken)
+	r.Header.Add("x-hasura-admin-secret", b.Config.HasuraToken)
 
 	client := &http.Client{}
 	res, err := client.Do(r)
