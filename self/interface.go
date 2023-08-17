@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelType, sender string, message string) (string, error) {
+func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
 	var user models.User
 	var err error
 
@@ -35,9 +35,9 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 
 	fmt.Println("User: ", user.UserName.String)
 
-	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, uuid.NullUUID{
-		UUID:  user.ID,
-		Valid: true,
+	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, models.GetMessagesByUserIDParams{
+		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
+		Limit:  20,
 	})
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -49,12 +49,12 @@ func (brain *BrainEngine) GenerateConversationResponse(ctx context.Context, chan
 		return "", errors.WithStack(err)
 	}
 
-	brainMessage, err := brain.ProcessMessageResponse(ctx, user, lastMessages, userMessage)
+	brainMessage, agent, err := brain.processMessageResponse(ctx, &user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID)
+	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID, agent)
 	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)

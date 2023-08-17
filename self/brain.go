@@ -14,14 +14,13 @@ import (
 	"github.com/xo/dburl"
 )
 
-type BrainEngine struct {
+type SystemEngine struct {
 	DatabaseClient *models.Queries
 	LLMEngine      *llm.LLMEngine
-	Name           string
-	HasuraToken    string
+	Config         *config.Config
 }
 
-func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
+func NewBrainEngine(config *config.Config) (*SystemEngine, error) {
 	url, err := dburl.Parse(config.DatabaseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -65,10 +64,9 @@ func NewBrainEngine(config *config.Config) (*BrainEngine, error) {
 
 	client := models.New(db)
 
-	return &BrainEngine{
+	return &SystemEngine{
 		DatabaseClient: client,
 		LLMEngine:      llmEngine,
-		Name:           config.Name,
-		HasuraToken:    config.HasuraToken,
+		Config:         config,
 	}, nil
 }

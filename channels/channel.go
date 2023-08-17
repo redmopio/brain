@@ -4,15 +4,16 @@ import (
 	"context"
 )
 
-type ChannelType int
+type ChannelName string
 
 const (
-	TelegramChannel ChannelType = iota
-	WhatsAppChannel
+	TelegramChannel ChannelName = "telegram"
+	WhatsAppChannel ChannelName = "whatsapp"
 )
 
 type Channel interface {
-	// GenerateResponse(ctx context.Context, senderID string, message string) (string, error)
+	Name() ChannelName
+	SendMessage(ctx context.Context, senderID string, message string) (string, error)
 	Connect(ctx context.Context)
 	Disconnect(ctx context.Context)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/mdp/qrterminal/v3"
 	"github.com/minskylab/brain/config"
+	"github.com/pkg/errors"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -22,16 +23,16 @@ import (
 type (
 	WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
 	WhatsAppConnector    struct {
-		DatabaseName      string
-		CalculateResponse WhatsAppResponseFunc
-		client            *whatsmeow.Client
+		DatabaseName string
+		response     WhatsAppResponseFunc
+		client       *whatsmeow.Client
 	}
 )
 
 func NewWhatsAppConnector(config *config.Config, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
-		DatabaseName:      config.WhatsAppDatabaseName,
-		CalculateResponse: response,
+		DatabaseName: config.WhatsAppDatabaseName,
+		response:     response,
 	}
 }
 
@@ -50,7 +51,7 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 		fmt.Println("Sender:", sender)
 
 		senderJID := sender.ToNonAD()
-		response, err := w.CalculateResponse(ctx, senderJID, userMessage)
+		response, err := w.response(ctx, senderJID, userMessage)
 		if err != nil {
 			panic(err)
 		}
@@ -113,4 +114,13 @@ func (w *WhatsAppConnector) Connect(ctx context.Context) {
 
 func (w *WhatsAppConnector) Disconnect(ctx context.Context) {
 	w.client.Disconnect()
+}
+
+func (w *WhatsAppConnector) SendMessage(ctx context.Context, sender string, message string) (string, error) {
+	senderJID, err := types.ParseJID(sender)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return w.response(ctx, senderJID, message)
 }

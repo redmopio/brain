@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	TelegramResponseFunc func(ctx context.Context, sender string, message string) (string, error)
+	TelegramResponseFunc func(ctx context.Context, senderID string, message string) (string, error)
 	TelegramConnector    struct {
 		apiKey   string
 		response TelegramResponseFunc
@@ -61,6 +61,10 @@ func (t *TelegramConnector) Connect(ctx context.Context) {
 	}
 }
 
-func (w *TelegramConnector) Disconnect(ctx context.Context) {
+func (t *TelegramConnector) Disconnect(ctx context.Context) {
 	// w.client.Disconnect()
+}
+
+func (t *TelegramConnector) SendMessage(ctx context.Context, sender string, message string) (string, error) {
+	return t.response(ctx, sender, message)
 }
