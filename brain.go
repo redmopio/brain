@@ -35,6 +35,10 @@ type Message struct {
 	// Group *models.Group
 }
 
+func NewMessages(messages ...models.Message) []Message {
+	return []Message{}
+}
+
 func (b *Brain) lastMessage(ctx context.Context, messages []Message) (*Message, error) {
 	if len(messages) == 0 {
 		return nil, nil

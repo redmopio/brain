@@ -9,7 +9,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (b *Brain) NewUserMessage(ctx context.Context, user models.User, message string) (models.Message, error) {
+func (b *Brain) NewUserMessage(ctx context.Context, user *models.User, message string) (models.Message, error) {
 	return b.System.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID: uuid.NullUUID{
 			UUID:  user.ID,
@@ -26,7 +26,7 @@ func (b *Brain) NewUserMessage(ctx context.Context, user models.User, message st
 	})
 }
 
-func (b *Brain) NewUserMessageWithParent(ctx context.Context, user models.User, parentID uuid.UUID, message string) (models.Message, error) {
+func (b *Brain) NewUserMessageWithParent(ctx context.Context, user *models.User, parentID uuid.UUID, message string) (models.Message, error) {
 	return b.System.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID: uuid.NullUUID{
 			UUID:  user.ID,
