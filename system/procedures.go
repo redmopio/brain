@@ -1,20 +1,40 @@
-package self
+package system
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/minskylab/brain/models"
+
 	"github.com/pkg/errors"
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
-	openAiResponse, agent, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
+const (
+	AgentNameDefault             AgentName = "default"
+	AgentNameAgentWriteParseData AgentName = "agent_write_parse_data"
+	AgentNameAgentWriteStoreData AgentName = "agent_write_store_data"
+	AgentNameAgentReadParseData  AgentName = "agent_read_parse_data"
+	AgentNameAgentReadResponse   AgentName = "agent_read_response"
+)
+
+func firstN(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
+}
+
+type AgentName string
+
+func (system *SystemEngine) processMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
+	openAiResponse, agent, err := system.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}
@@ -24,7 +44,7 @@ func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *mod
 
 	for _, keyword := range responseWithDataKeywords {
 		if strings.Contains(strings.ToLower(openAiMessageContent), keyword) {
-			parsedDataFromOpenAI, agent, err := brain.processDataMessageWithOpenAI(ctx, user, openAiMessageContent)
+			parsedDataFromOpenAI, agent, err := system.processDataMessageWithOpenAI(ctx, user, openAiMessageContent)
 			if err != nil {
 				fmt.Printf("Error processing data message: %s\n", err.Error())
 				return "", nil, errors.WithStack(err)
@@ -45,7 +65,7 @@ func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *mod
 			}
 
 			fmt.Printf("\t -> Calling Hasura endpoint with data: %s\n", parsedDataFromOpenAIContent)
-			_, err = brain.callHasuraEndpoint(parsedDataFromOpenAIContent)
+			_, err = system.callHasuraEndpoint(parsedDataFromOpenAIContent)
 			if err != nil {
 				return "Lo siento, hubo un error al guardar tus datos. Por favor, intentalo nuevamente en unos minutos.", nil, nil
 			}
@@ -59,14 +79,14 @@ func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *mod
 	return openAiMessageContent, agent, nil
 }
 
-func (brain *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, user *models.User, messageContent string) (*openai.ChatCompletionResponse, *models.Agent, error) {
-	agentWriteParseData, err := brain.getAgent(ctx, string(AgentNameAgentWriteParseData))
+func (system *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, user *models.User, messageContent string) (*openai.ChatCompletionResponse, *models.Agent, error) {
+	agentWriteParseData, err := system.getAgent(ctx, string(AgentNameAgentWriteParseData))
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	messages := brain.prepareMessagesForConversation(&agentWriteParseData, messageContent, nil, []models.GetMessagesByUserIDRow{})
+	messages := system.prepareMessagesForConversation(&agentWriteParseData, messageContent, nil, []models.GetMessagesByUserIDRow{})
 
-	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	response, err := system.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
 		Messages: messages,
 	})
@@ -77,12 +97,12 @@ func (brain *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, use
 	return &response, &agentWriteParseData, nil
 }
 
-func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
-	agentWriteStoreData, err := brain.getAgent(ctx, string(AgentNameAgentWriteStoreData))
+func (system *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
+	agentWriteStoreData, err := system.getAgent(ctx, string(AgentNameAgentWriteStoreData))
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	messages := brain.prepareMessagesForConversation(&agentWriteStoreData, inputMessage.Content.String, user, lastMessages)
+	messages := system.prepareMessagesForConversation(&agentWriteStoreData, inputMessage.Content.String, user, lastMessages)
 
 	fmt.Printf("Total messages: %d\n", len(messages))
 
@@ -90,7 +110,7 @@ func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *m
 		fmt.Printf("\tMessage: [%s] %s\n", msg.Role, firstN(msg.Content, 100))
 	}
 
-	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+	response, err := system.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
 		Messages: messages,
 	})
@@ -101,7 +121,7 @@ func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *m
 	return &response, &agentWriteStoreData, nil
 }
 
-func (brain *SystemEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
+func (system *SystemEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
@@ -144,8 +164,8 @@ func (brain *SystemEngine) prepareMessagesForConversation(agent *models.Agent, m
 	return messages
 }
 
-func (brain *SystemEngine) getAgent(ctx context.Context, agentName string) (models.Agent, error) {
-	agent, err := brain.DatabaseClient.GetAgentByName(ctx, agentName)
+func (system *SystemEngine) getAgent(ctx context.Context, agentName string) (models.Agent, error) {
+	agent, err := system.DatabaseClient.GetAgentByName(ctx, agentName)
 	if err != nil {
 		return models.Agent{}, errors.WithStack(err)
 	}
@@ -155,8 +175,8 @@ func (brain *SystemEngine) getAgent(ctx context.Context, agentName string) (mode
 	return agent, nil
 }
 
-func (brain *SystemEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
-	storedMessage, err := brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
+func (system *SystemEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
+	storedMessage, err := system.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID:   message.UserID,
 		Role:     message.Role,
 		Content:  message.Content,
@@ -199,4 +219,45 @@ func buildChatbotMessage(userId uuid.UUID, messageContent string, parentId uuid.
 	}
 
 	return responseMessage
+}
+
+// map json to a struct
+type DataStruct struct {
+	StationCode    string  `json:"station_code"`
+	StreamName     string  `json:"stream_name"`
+	RainIntensity  int     `json:"rain_intensity"`
+	RainLevel      float64 `json:"rain_level"`
+	CurrentWeather string  `json:"current_weather"`
+	Datetime       string  `json:"date_time"`
+}
+
+func (system *SystemEngine) callHasuraEndpoint(bodyContent string) (bool, error) {
+	// HTTP endpoint
+	posturl := "https://redmop.practical-action.minsky.cc/api/rest/v1/instrument-records"
+
+	// JSON body
+	body := []byte(bodyContent)
+
+	// Create a HTTP post request
+	r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(body))
+	if err != nil {
+		return false, err
+	}
+
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("x-hasura-admin-secret", system.Config.HasuraToken)
+
+	client := &http.Client{}
+	res, err := client.Do(r)
+	if err != nil {
+		return false, err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return false, nil
+	}
+
+	return true, nil
 }

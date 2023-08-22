@@ -1,17 +1,18 @@
-package self
+package system
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/llm"
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 	"github.com/xo/dburl"
+
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type SystemEngine struct {
@@ -20,7 +21,7 @@ type SystemEngine struct {
 	Config         *config.Config
 }
 
-func NewBrainEngine(config *config.Config) (*SystemEngine, error) {
+func NewSystemEngine(config *config.Config) (*SystemEngine, error) {
 	url, err := dburl.Parse(config.DatabaseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)

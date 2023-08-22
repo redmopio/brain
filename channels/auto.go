@@ -1,17 +1,16 @@
 package channels
 
-import (
-	"context"
+// func InferChannelsFromConfig(ctx context.Context, b *brain.Brain) []brain.Channel {
+// 	totalChannels := []brain.Channel{}
 
-	"github.com/minskylab/brain/config"
-)
+// 	whatsAppChannel := NewWhatsAppConnector(b.System.Config, func(ctx context.Context, sender types.JID, message string) (string, error) {
+// 		// return b.System.GenerateConversationResponse(ctx, WhatsAppChannelName, sender.String(), message)
+// 		return "", nil
+// 	})
 
-func InferChannelsFromConfig(ctx context.Context, config *config.Config) []Channel {
-	channels := []Channel{}
+// 	totalChannels = append(totalChannels, whatsAppChannel)
 
-	// whatsAppChannel := NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-	// 	return brain.GenerateConversationResponse(ctx, WhatsAppChannel, sender.String(), message)
-	// })
+// 	// return channels
 
-	return channels
-}
+// 	return totalChannels
+// }

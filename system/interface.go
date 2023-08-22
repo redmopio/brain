@@ -1,4 +1,4 @@
-package self
+package system
 
 import (
 	"context"
@@ -6,25 +6,25 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/minskylab/brain/channels"
+
 	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 )
 
-func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
+func (system *SystemEngine) GenerateConversationResponse(ctx context.Context, channelName string, sender string, message string) (string, error) {
 	var user models.User
 	var err error
 
-	if channel == channels.WhatsAppChannel {
-		user, err = brain.DatabaseClient.GetUserByJID(ctx, sql.NullString{
+	if channelName == string("channels.WhatsAppChannelName") {
+		user, err = system.DatabaseClient.GetUserByJID(ctx, sql.NullString{
 			String: sender,
 			Valid:  true,
 		})
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-	} else if channel == channels.TelegramChannel {
-		user, err = brain.DatabaseClient.GetUserByTelegramID(ctx, sql.NullString{
+	} else if channelName == string("channels.TelegramChannel") {
+		user, err = system.DatabaseClient.GetUserByTelegramID(ctx, sql.NullString{
 			String: sender,
 			Valid:  true,
 		})
@@ -35,7 +35,7 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 
 	fmt.Println("User: ", user.UserName.String)
 
-	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, models.GetMessagesByUserIDParams{
+	lastMessages, err := system.DatabaseClient.GetMessagesByUserID(ctx, models.GetMessagesByUserIDParams{
 		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
 		Limit:  20,
 	})
@@ -44,18 +44,18 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 	}
 
 	userMessage := buildUserMessage(user.ID, message, lastMessages)
-	userMessage, err = brain.storeMessage(ctx, &userMessage)
+	userMessage, err = system.storeMessage(ctx, &userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	brainMessage, agent, err := brain.processMessageResponse(ctx, &user, lastMessages, userMessage)
+	brainMessage, agent, err := system.processMessageResponse(ctx, &user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
 	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID, agent)
-	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
+	responseMessage, err := system.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

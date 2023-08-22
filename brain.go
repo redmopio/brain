@@ -3,10 +3,9 @@ package brain
 import (
 	"context"
 
-	"github.com/minskylab/brain/channels"
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/models"
-	"github.com/minskylab/brain/self"
+	"github.com/minskylab/brain/system"
 	"github.com/pkg/errors"
 )
 
@@ -24,15 +23,10 @@ type Agent struct {
 	AfterResponse  AgentAfterResponseFunction
 }
 
-type Channel struct {
-	ID   string
-	Name string
-}
-
 type Brain struct {
-	System   *self.SystemEngine
+	System   *system.SystemEngine
 	Agents   map[string]Agent
-	Channels map[string]channels.Channel
+	Channels map[string]Channel
 }
 
 type Message struct {
@@ -57,7 +51,7 @@ func (b *Brain) Interact(ctx context.Context, agentName string, messages []Messa
 }
 
 func NewBrain(ctx context.Context, config *config.Config) (*Brain, error) {
-	system, err := self.NewBrainEngine(config)
+	system, err := system.NewSystemEngine(config)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -79,11 +73,11 @@ func NewBrain(ctx context.Context, config *config.Config) (*Brain, error) {
 	return &Brain{
 		System:   system,
 		Agents:   map[string]Agent{},
-		Channels: map[string]channels.Channel{},
+		Channels: map[string]Channel{},
 	}, nil
 }
 
-func (b *Brain) RegisterChannel(channel channels.Channel) {
+func (b *Brain) RegisterChannel(channel Channel) {
 	b.Channels[string(channel.Name())] = channel
 }
 

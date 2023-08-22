@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/mdp/qrterminal/v3"
+
+	"github.com/minskylab/brain"
 	"github.com/minskylab/brain/config"
+	"github.com/minskylab/brain/models"
 	"github.com/pkg/errors"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -108,8 +111,6 @@ func (w *WhatsAppConnector) Connect(ctx context.Context) {
 	}
 
 	w.client = client // recursive?
-
-	// return client
 }
 
 func (w *WhatsAppConnector) Disconnect(ctx context.Context) {
@@ -123,4 +124,12 @@ func (w *WhatsAppConnector) SendMessage(ctx context.Context, sender string, mess
 	}
 
 	return w.response(ctx, senderJID, message)
+}
+
+func (w *WhatsAppConnector) GetUserByID(ctx context.Context, brain *brain.Brain, userID string) (*models.User, error) {
+	return nil, nil
+}
+
+func (w *WhatsAppConnector) Name() brain.ChannelName {
+	return WhatsAppChannelName
 }
