@@ -2,6 +2,7 @@ package brain
 
 import (
 	"context"
+	"os"
 
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/models"
@@ -95,4 +96,20 @@ func (b *Brain) RegisterAfterResponseFunction(agentName string, f AgentAfterResp
 	b.Agents[agentName] = Agent{
 		AfterResponse: f,
 	}
+}
+
+func (b *Brain) RegisterAgent(ctx context.Context, name string, constitution string) (models.Agent, error) {
+	return b.System.DatabaseClient.UpsertAgent(ctx, models.UpsertAgentParams{
+		Name:         name,
+		Constitution: constitution,
+	})
+}
+
+func (b *Brain) RegisterAgentFromFile(ctx context.Context, name string, constitutionPath string) (models.Agent, error) {
+	constitution, err := os.ReadFile(constitutionPath)
+	if err != nil {
+		return models.Agent{}, errors.WithStack(err)
+	}
+
+	return b.RegisterAgent(ctx, name, string(constitution))
 }

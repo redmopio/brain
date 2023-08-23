@@ -200,3 +200,31 @@ func (q *Queries) GetUserByTelegramID(ctx context.Context, telegramID sql.NullSt
 	)
 	return i, err
 }
+
+const upsertAgent = `-- name: UpsertAgent :one
+INSERT INTO agents (
+  name, constitution
+) VALUES (
+  $1, $2
+) ON CONFLICT (name) DO UPDATE SET
+  constitution = $2
+RETURNING id, created_at, updated_at, name, constitution
+`
+
+type UpsertAgentParams struct {
+	Name         string
+	Constitution string
+}
+
+func (q *Queries) UpsertAgent(ctx context.Context, arg UpsertAgentParams) (Agent, error) {
+	row := q.db.QueryRowContext(ctx, upsertAgent, arg.Name, arg.Constitution)
+	var i Agent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Constitution,
+	)
+	return i, err
+}

@@ -33,3 +33,12 @@ WHERE name = $1 LIMIT 1;
 
 -- name: GetAllAgents :many
 SELECT * FROM agents;
+
+-- name: UpsertAgent :one
+INSERT INTO agents (
+  name, constitution
+) VALUES (
+  $1, $2
+) ON CONFLICT (name) DO UPDATE SET
+  constitution = $2
+RETURNING *;

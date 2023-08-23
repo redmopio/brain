@@ -22,6 +22,25 @@ func main() {
 		panic(err)
 	}
 
+	agent, err := b.RegisterAgentFromFile(ctx, "default", "agents/default.md")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%+v\n", agent)
+
+	b.RegisterBeforeResponseFunction("default", func(ctx context.Context, agentName string, messages []brain.Message) (*brain.Message, error) {
+		if len(messages) == 0 {
+			return nil, nil
+		}
+
+		lastMessage := messages[len(messages)-1]
+
+		fmt.Println(lastMessage)
+
+		return nil, nil
+	})
+
 	user, err := b.ObtainUserByChannelAndID(ctx, string(channels.WhatsAppChannelName), "1234567890")
 	if err != nil {
 		panic(err)
