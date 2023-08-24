@@ -29,14 +29,14 @@ func main() {
 
 	fmt.Printf("%+v\n", agent)
 
-	b.RegisterBeforeResponseFunction("default", func(ctx context.Context, agentName string, messages []brain.Message) (*brain.Message, error) {
-		if len(messages) == 0 {
-			return nil, nil
-		}
+	b.RegisterBeforeResponseFunction("default", func(ctx context.Context, agent *brain.Agent, messages []brain.Message) (*brain.Message, error) {
+		fmt.Println("default agent: before response")
 
-		lastMessage := messages[len(messages)-1]
+		return nil, nil
+	})
 
-		fmt.Println(lastMessage)
+	b.RegisterAfterResponseFunction("default", func(ctx context.Context, agent *brain.Agent, messages []brain.Message, toResponse brain.Message) (*brain.Message, error) {
+		fmt.Println("default agent: after response")
 
 		return nil, nil
 	})

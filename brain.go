@@ -11,8 +11,8 @@ import (
 )
 
 type (
-	AgentBeforeResponseFunction func(ctx context.Context, agentName string, messages []Message) (*Message, error)
-	AgentAfterResponseFunction  func(ctx context.Context, agentName string, messages []Message, toResponse Message) (*Message, error)
+	AgentBeforeResponseFunction func(ctx context.Context, agent *Agent, messages []Message) (*Message, error)
+	AgentAfterResponseFunction  func(ctx context.Context, agent *Agent, messages []Message, toResponse Message) (*Message, error)
 )
 
 type Agent struct {
@@ -20,13 +20,13 @@ type Agent struct {
 	Name         string
 	Constitution string
 
-	BeforeResponse AgentBeforeResponseFunction
-	AfterResponse  AgentAfterResponseFunction
+	beforeResponseHandlers []AgentBeforeResponseFunction
+	afterResponseHandlers  []AgentAfterResponseFunction
 }
 
 type Brain struct {
 	System   *system.SystemEngine
-	Agents   map[string]Agent
+	Agents   map[string]*Agent
 	Channels map[string]Channel
 }
 
@@ -40,13 +40,13 @@ func NewMessages(messages ...models.Message) []Message {
 	return []Message{}
 }
 
-func (b *Brain) lastMessage(ctx context.Context, messages []Message) (*Message, error) {
-	if len(messages) == 0 {
-		return nil, nil
-	}
+// func (b *Brain) lastMessage(ctx context.Context, messages []Message) (*Message, error) {
+// 	if len(messages) == 0 {
+// 		return nil, nil
+// 	}
 
-	return &messages[len(messages)-1], nil
-}
+// 	return &messages[len(messages)-1], nil
+// }
 
 func (b *Brain) Interact(ctx context.Context, agentName string, messages []Message) (*Message, error) {
 	// lastMessage, _ := b.lastMessage(ctx, messages)
@@ -77,7 +77,7 @@ func NewBrain(ctx context.Context, config *config.Config) (*Brain, error) {
 
 	return &Brain{
 		System:   system,
-		Agents:   map[string]Agent{},
+		Agents:   map[string]*Agent{},
 		Channels: map[string]Channel{},
 	}, nil
 }
@@ -87,15 +87,11 @@ func (b *Brain) RegisterChannel(channel Channel) {
 }
 
 func (b *Brain) RegisterBeforeResponseFunction(agentName string, f AgentBeforeResponseFunction) {
-	b.Agents[agentName] = Agent{
-		BeforeResponse: f,
-	}
+	b.Agents[agentName].beforeResponseHandlers = append(b.Agents[agentName].beforeResponseHandlers, f)
 }
 
 func (b *Brain) RegisterAfterResponseFunction(agentName string, f AgentAfterResponseFunction) {
-	b.Agents[agentName] = Agent{
-		AfterResponse: f,
-	}
+	b.Agents[agentName].afterResponseHandlers = append(b.Agents[agentName].afterResponseHandlers, f)
 }
 
 func (b *Brain) RegisterAgent(ctx context.Context, name string, constitution string) (models.Agent, error) {
