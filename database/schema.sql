@@ -40,3 +40,23 @@ CREATE TABLE agents (
 );
 
 CREATE UNIQUE INDEX agents_name_idx ON agents (name);
+
+
+CREATE TABLE groups (
+    id          uuid default gen_random_uuid() not null primary key,
+
+    created_at  timestamp with time zone default now() not null,
+    updated_at  timestamp with time zone default now() not null,
+
+    name        varchar(255) null,
+    description text null
+);
+
+CREATE TABLE users_groups (
+    user_id    uuid references users(id),
+    group_id   uuid references groups(id),
+    created_at timestamp with time zone default now() not null,
+    updated_at timestamp with time zone default now() not null,
+
+    primary key (user_id, group_id)
+);
