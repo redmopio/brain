@@ -43,7 +43,7 @@ func main() {
 
 	if config.TelegramAPIKey != "" {
 		telegramChannel = channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
-			return engine.GenerateConversationResponse(ctx, string(channels.TelegramChannel), sender, message)
+			return engine.GenerateConversationResponse(ctx, string(channels.TelegramChannelName), sender, message)
 		})
 
 		telegramChannel.Connect(ctx)
