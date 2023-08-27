@@ -3,11 +3,15 @@ package brain
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/minskylab/brain/channels"
 	"github.com/minskylab/brain/config"
 	"github.com/minskylab/brain/models"
 	"github.com/minskylab/brain/system"
 	"github.com/pkg/errors"
+	"go.mau.fi/whatsmeow/types"
 )
 
 type (
@@ -22,12 +26,14 @@ type Agent struct {
 
 	beforeResponseHandlers []AgentBeforeResponseFunction
 	afterResponseHandlers  []AgentAfterResponseFunction
+
+	brain *Brain
 }
 
 type Brain struct {
-	System   *system.SystemEngine
-	Agents   map[string]*Agent
-	Channels map[string]Channel
+	System *system.SystemEngine
+	Agents map[string]*Agent
+	// Channels map[string]Channel
 }
 
 type Message struct {
@@ -37,8 +43,8 @@ type Message struct {
 }
 
 type BrainBuilder struct {
-	config   *config.Config
-	channels []ChannelName
+	config *config.Config
+	// channels []ChannelName
 }
 
 func NewMessages(messages ...models.Message) []Message {
@@ -66,85 +72,57 @@ func NewBrainBuilder(config *config.Config) *BrainBuilder {
 	}
 }
 
-func (bb *BrainBuilder) WithChannel(channel ChannelName) *BrainBuilder {
-	bb.channels = append(bb.channels, channel)
+// func (bb *BrainBuilder) WithChannel(channel ChannelName) *BrainBuilder {
+// 	bb.channels = append(bb.channels, channel)
 
-	return bb
-}
+// 	return bb
+// }
 
 func (bb *BrainBuilder) Build(ctx context.Context) (*Brain, error) {
-	// whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-	// 	return engine.GenerateConversationResponse(ctx, string(channels.WhatsAppChannelName), sender.String(), message)
-	// })
-
-	// if !config.WhatsAppDisabled {
-	// 	go whatsAppChannel.Connect(ctx)
-	// }
-
-	// var telegramChannel *channels.TelegramConnector
-
-	// if config.TelegramAPIKey != "" {
-	// 	telegramChannel = channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
-	// 		return engine.GenerateConversationResponse(ctx, string(channels.TelegramChannelName), sender, message)
-	// 	})
-
-	// 	telegramChannel.Connect(ctx)
-	// }
-
-	return nil, nil
-}
-
-func newBrain(ctx context.Context, config *config.Config) (*Brain, error) {
-	system, err := system.NewSystemEngine(config)
+	system, err := system.NewSystemEngine(bb.config)
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-
-	registeredAgents, err := system.DatabaseClient.GetAllAgents(ctx)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	agents := map[string]Agent{}
-	for _, agent := range registeredAgents {
-		agents[agent.Name] = Agent{
-			ID:           agent.ID.String(),
-			Name:         agent.Name,
-			Constitution: agent.Constitution,
-		}
 	}
 
 	return &Brain{
-		System:   system,
-		Agents:   map[string]*Agent{},
-		Channels: map[string]Channel{},
+		System: system,
+		Agents: map[string]*Agent{},
+		// Channels: map[string]Channel{},
 	}, nil
 }
 
-func (b *Brain) RegisterChannel(channel Channel) {
-	b.Channels[string(channel.Name())] = channel
-}
-
-// func (b *Brain) RegisterBeforeResponseFunction(agentName string, f AgentBeforeResponseFunction) {
-// 	b.Agents[agentName].beforeResponseHandlers = append(b.Agents[agentName].beforeResponseHandlers, f)
-// }
-
-// func (b *Brain) RegisterAfterResponseFunction(agentName string, f AgentAfterResponseFunction) {
-// 	b.Agents[agentName].afterResponseHandlers = append(b.Agents[agentName].afterResponseHandlers, f)
-// }
-
-func (b *Brain) RegisterAgent(ctx context.Context, name string, constitution string) (models.Agent, error) {
-	return b.System.DatabaseClient.UpsertAgent(ctx, models.UpsertAgentParams{
-		Name:         name,
-		Constitution: constitution,
+func (b *Brain) Run(ctx context.Context) error {
+	whatsAppChannel := channels.NewWhatsAppConnector(b.System.Config, func(ctx context.Context, sender types.JID, message string) (string, error) {
+		return b.System.GenerateConversationResponse(ctx, string(channels.WhatsAppChannelName), sender.String(), message)
 	})
-}
 
-func (b *Brain) RegisterAgentFromFile(ctx context.Context, name string, constitutionPath string) (models.Agent, error) {
-	constitution, err := os.ReadFile(constitutionPath)
-	if err != nil {
-		return models.Agent{}, errors.WithStack(err)
+	if !b.System.Config.WhatsAppDisabled {
+		go whatsAppChannel.Connect(ctx)
 	}
 
-	return b.RegisterAgent(ctx, name, string(constitution))
+	var telegramChannel *channels.TelegramConnector
+
+	if b.System.Config.TelegramAPIKey != "" {
+		telegramChannel = channels.NewTelegramConnector(b.System.Config, func(ctx context.Context, sender string, message string) (string, error) {
+			return b.System.GenerateConversationResponse(ctx, string(channels.TelegramChannelName), sender, message)
+		})
+
+		telegramChannel.Connect(ctx)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+
+	whatsAppChannel.Disconnect(ctx)
+
+	if telegramChannel != nil {
+		telegramChannel.Disconnect(ctx)
+	}
+
+	return nil
+}
+
+func (a *Agent) Interact(ctx context.Context, messages []Message) (*Message, error) {
+	return nil, nil
 }

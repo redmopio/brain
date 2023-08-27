@@ -1,6 +1,12 @@
 package brain
 
-import "context"
+import (
+	"context"
+	"os"
+
+	"github.com/minskylab/brain/models"
+	"github.com/pkg/errors"
+)
 
 type AgentBuilder struct {
 	name             string
@@ -45,5 +51,33 @@ func (ab *AgentBuilder) WithBeforeResponseFunction(callback AgentBeforeResponseF
 }
 
 func (ab *AgentBuilder) Build(ctx context.Context) (*Agent, error) {
-	return nil, nil
+	constitution := ""
+
+	if ab.constitutionFile != nil {
+		constitutionBytes, err := os.ReadFile(*ab.constitutionFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading constitution file")
+		}
+
+		constitution = string(constitutionBytes)
+	} else if ab.constitution != nil {
+		constitution = *ab.constitution
+	}
+
+	agentModel, err := ab.brain.System.DatabaseClient.UpsertAgent(ctx, models.UpsertAgentParams{
+		Name:         ab.name,
+		Constitution: constitution,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error registering agent")
+	}
+
+	return &Agent{
+		ID:                     agentModel.ID.String(),
+		Name:                   agentModel.Name,
+		Constitution:           agentModel.Constitution,
+		beforeResponseHandlers: ab.beforeResponseHandlers,
+		afterResponseHandlers:  ab.afterResponseHandlers,
+		brain:                  ab.brain,
+	}, nil
 }

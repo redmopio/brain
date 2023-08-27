@@ -56,8 +56,8 @@ func (system *SystemEngine) processMessageResponse(ctx context.Context, user *mo
 				return "Disculpa, creo que no ingresaste todos los datos. Revisa el ejemplo y vuelve a intentarlo.", nil, nil
 			}
 
-			// parse content from openAiResponse to DataStruct
 			var data DataStruct
+
 			err = json.Unmarshal([]byte(parsedDataFromOpenAI.Choices[0].Message.Content), &data)
 			if err != nil {
 				fmt.Printf("Error parsing data: %s\n", err.Error())
