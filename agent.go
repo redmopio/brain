@@ -73,9 +73,7 @@ func (ab *AgentBuilder) Build(ctx context.Context) (*Agent, error) {
 	}
 
 	return &Agent{
-		ID:                     agentModel.ID.String(),
-		Name:                   agentModel.Name,
-		Constitution:           agentModel.Constitution,
+		Agent:                  &agentModel,
 		beforeResponseHandlers: ab.beforeResponseHandlers,
 		afterResponseHandlers:  ab.afterResponseHandlers,
 		brain:                  ab.brain,

@@ -1,5 +1,12 @@
 package brain
 
+import (
+	"strings"
+
+	"github.com/minskylab/brain/models"
+	"github.com/sashabaranov/go-openai"
+)
+
 // import (
 // 	"fmt"
 // 	"os"
@@ -70,3 +77,46 @@ package brain
 // 		// HasuraToken:    config.HasuraToken,
 // 	}, nil
 // }
+
+func prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []Message) []openai.ChatCompletionMessage {
+	messages := []openai.ChatCompletionMessage{}
+
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleSystem,
+		Content: agent.Constitution,
+	})
+
+	for i := len(lastMessages) - 1; i >= 0; i-- {
+		msg := lastMessages[i]
+		messageName := msg.User.UserName.String
+		messageName = strings.ReplaceAll(messageName, " ", "_")
+		role := openai.ChatMessageRoleUser
+
+		if msg.Role.String == openai.ChatMessageRoleAssistant {
+			role = openai.ChatMessageRoleAssistant
+			messageName = ""
+		}
+
+		messages = append(messages, openai.ChatCompletionMessage{
+			Name:    messageName,
+			Role:    role,
+			Content: msg.Content.String,
+		})
+	}
+
+	// lastMessageToAppend := openai.ChatCompletionMessage{
+	// 	Role:    openai.ChatMessageRoleUser,
+	// 	Content: messageContent,
+	// }
+
+	// if user != nil {
+	// userName := user.UserName.String
+	// userName = strings.ReplaceAll(userName, " ", "_")
+
+	// lastMessageToAppend.Name = userName
+	// }
+
+	// messages = append(messages, lastMessageToAppend)
+
+	return messages
+}

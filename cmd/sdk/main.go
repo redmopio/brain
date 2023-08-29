@@ -26,6 +26,7 @@ func main() {
 		WithConstitutionFromFile("agents/agent_write_parse_data.md").
 		WithBeforeResponseFunction(func(ctx context.Context, agent *brain.Agent, messages []brain.Message) (*brain.Message, error) {
 			fmt.Println("default agent: before response")
+			agent.Interact(ctx, messages)
 			return nil, nil
 		}).
 		WithAfterResponseFunction(func(ctx context.Context, agent *brain.Agent, messages []brain.Message, toResponse brain.Message) (*brain.Message, error) {
@@ -52,19 +53,26 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(agentWriteParse)
-	fmt.Println(agentWriteStoreData)
+	fmt.Printf("%+v\n", minskyBrain)
 
-	// user, err := b.ObtainUserByChannelAndID(ctx, string(channels.WhatsAppChannelName), "1234567890")
-	// if err != nil {
-	// 	panic(err)
-	// }
+	fmt.Printf("%+v\n", agentWriteParse)
+	fmt.Printf("%+v\n", agentWriteStoreData)
 
-	// message, err := b.NewUserMessage(ctx, user, "Hola, soy un mensaje de prueba")
-	// if err != nil {
-	// 	panic(err)
-	// }
+	user, err := minskyBrain.ObtainUserByWhatsAppID(ctx, "51957821858@s.whatsapp.net")
+	if err != nil {
+		panic(err)
+	}
 
-	// b.Interact(ctx, agent, brain.NewMessages(message))
-	fmt.Println(minskyBrain)
+	// fmt.Printf("%+v\n", user)
+
+	response, err := agentWriteParse.Interact(ctx, brain.UserMessages(
+		&user,
+		"Hola",
+	))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%+v\n", response)
+	fmt.Printf("%+v\n", response.Content)
 }

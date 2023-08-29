@@ -9,7 +9,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (b *Brain) NewUserMessage(ctx context.Context, user *models.User, message string) (models.Message, error) {
+func (b *Brain) NewUserMessageWithUser(ctx context.Context, user *models.User, message string) (models.Message, error) {
 	return b.System.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
 		UserID: uuid.NullUUID{
 			UUID:  user.ID,
@@ -17,6 +17,19 @@ func (b *Brain) NewUserMessage(ctx context.Context, user *models.User, message s
 		},
 		Role: sql.NullString{
 			String: openai.ChatMessageRoleUser,
+			Valid:  true,
+		},
+		Content: sql.NullString{
+			String: message,
+			Valid:  true,
+		},
+	})
+}
+
+func (b *Brain) NewAssistantMessage(ctx context.Context, message string) (models.Message, error) {
+	return b.System.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
+		Role: sql.NullString{
+			String: openai.ChatMessageRoleAssistant,
 			Valid:  true,
 		},
 		Content: sql.NullString{
