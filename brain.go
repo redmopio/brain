@@ -18,8 +18,8 @@ import (
 )
 
 type (
-	AgentBeforeResponseFunction func(ctx context.Context, agent *Agent, messages []Message) (*Message, error)
-	AgentAfterResponseFunction  func(ctx context.Context, agent *Agent, messages []Message, toResponse Message) (*Message, error)
+	AgentBeforeResponseFunction func(ctx context.Context, agent *Agent, messages []Message) ([]Message, error)
+	AgentAfterResponseFunction  func(ctx context.Context, agent *Agent, messages []Message, toResponse *Message) (*Message, error)
 )
 
 type Agent struct {
@@ -122,9 +122,9 @@ func (bb *BrainBuilder) Build(ctx context.Context) (*Brain, error) {
 	}, nil
 }
 
-func (b *Brain) Run(ctx context.Context) error {
+func (b *Brain) Run(ctx context.Context, defaultAgent *Agent) error {
 	whatsAppChannel := channels.NewWhatsAppConnector(b.System.Config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		return b.System.GenerateConversationResponse(ctx, string(channels.WhatsAppChannelName), sender.String(), message)
+		return b.generateConversationResponse(ctx, defaultAgent, string(channels.WhatsAppChannelName), sender.String(), message)
 	})
 
 	if !b.System.Config.WhatsAppDisabled {
@@ -135,7 +135,7 @@ func (b *Brain) Run(ctx context.Context) error {
 
 	if b.System.Config.TelegramAPIKey != "" {
 		telegramChannel = channels.NewTelegramConnector(b.System.Config, func(ctx context.Context, sender string, message string) (string, error) {
-			return b.System.GenerateConversationResponse(ctx, string(channels.TelegramChannelName), sender, message)
+			return b.generateConversationResponse(ctx, defaultAgent, string(channels.TelegramChannelName), sender, message)
 		})
 
 		telegramChannel.Connect(ctx)
@@ -162,6 +162,15 @@ func (a *Agent) Interact(ctx context.Context, messages []Message) (*Message, err
 
 	user := lastMessage.User
 
+	// fmt.Println(len(a.beforeResponseHandlers))
+
+	for _, h := range a.beforeResponseHandlers {
+		messages, err = h(ctx, a, messages)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
 	openAIMessages := prepareMessagesForConversation(a.Agent, lastMessage.Content.String, user, messages)
 
 	fmt.Printf("Total messages: %d\n", len(openAIMessages))
@@ -185,10 +194,19 @@ func (a *Agent) Interact(ctx context.Context, messages []Message) (*Message, err
 		return nil, errors.WithStack(err)
 	}
 
-	return &Message{
+	message := &Message{
 		Message: &messageResponse,
 		// User:    user,
-	}, nil
+	}
+
+	for _, h := range a.afterResponseHandlers {
+		message, err = h(ctx, a, messages, message)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	return message, nil
 }
 
 func lastMessage(ctx context.Context, messages []Message) (*Message, error) {
@@ -198,16 +216,6 @@ func lastMessage(ctx context.Context, messages []Message) (*Message, error) {
 
 	return &messages[len(messages)-1], nil
 }
-
-// func messagesToModelMessages(ctx context.Context, messages []Message) ([]*models.Message, error) {
-// 	modelMessages := []*models.Message{}
-
-// 	for _, msg := range messages {
-// 		modelMessages = append(modelMessages, msg.Message)
-// 	}
-
-// 	return modelMessages, nil
-// }
 
 func firstN(s string, n int) string {
 	if len(s) > n {

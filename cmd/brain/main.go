@@ -10,7 +10,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/minskylab/brain/channels"
 	"github.com/minskylab/brain/config"
-	"github.com/minskylab/brain/system"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -22,17 +21,18 @@ func main() {
 
 	fmt.Println("Brain Engine is starting...")
 
-	engine, err := system.NewSystemEngine(config)
-	if err != nil {
-		panic(err)
-	}
+	// engine, err := system.NewSystemEngine(config)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	fmt.Println("Brain Engine is ready to work!")
 
 	ctx := context.Background()
 
 	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		return engine.GenerateConversationResponse(ctx, string(channels.WhatsAppChannelName), sender.String(), message)
+		// return engine.GenerateConversationResponse(ctx, nil, string(channels.WhatsAppChannelName), sender.String(), message)
+		return "", nil
 	})
 
 	if !config.WhatsAppDisabled {
@@ -43,7 +43,8 @@ func main() {
 
 	if config.TelegramAPIKey != "" {
 		telegramChannel = channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
-			return engine.GenerateConversationResponse(ctx, string(channels.TelegramChannelName), sender, message)
+			// return engine.GenerateConversationResponse(ctx, nil, string(channels.TelegramChannelName), sender, message)
+			return "", nil
 		})
 
 		telegramChannel.Connect(ctx)
