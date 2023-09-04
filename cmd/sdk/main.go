@@ -22,15 +22,24 @@ func main() {
 		panic(err)
 	}
 
-	agentWriteParse, err := minskyBrain.NewAgentBuilder("agent_write_parse_data").
+	type AgentWriteParse struct{}
+
+	// agentWithPayload :=
+
+	// agentWithPayload.
+
+	agentWriteParse, err := brain.NewAgentBuilderWithPayload[AgentWriteParse](minskyBrain, "agent_write_parse_data").
+		WithAfterResponseFunction(func(ctx context.Context, agent *brain.Agent, messages []brain.Message, toResponse *brain.MessageWithPayload[AgentWriteParse]) (*brain.MessageWithPayload[AgentWriteParse], error) {
+			fmt.Println("agent_write_parse_data: after response")
+
+			return toResponse.WithPayload(
+				&AgentWriteParse{},
+			), nil
+		}).
 		WithConstitutionFromFile("agents/agent_write_parse_data.md").
 		WithBeforeResponseFunction(func(ctx context.Context, agent *brain.Agent, messages []brain.Message) ([]brain.Message, error) {
 			fmt.Println("agent_write_parse_data: before response")
 			return messages, nil
-		}).
-		WithAfterResponseFunction(func(ctx context.Context, agent *brain.Agent, messages []brain.Message, toResponse *brain.Message) (*brain.Message, error) {
-			fmt.Println("agent_write_parse_data: after response")
-			return toResponse, nil
 		}).
 		Build(ctx)
 	if err != nil {

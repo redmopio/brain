@@ -18,8 +18,8 @@ import (
 )
 
 type (
-	AgentBeforeResponseFunction func(ctx context.Context, agent *Agent, messages []Message) ([]Message, error)
-	AgentAfterResponseFunction  func(ctx context.Context, agent *Agent, messages []Message, toResponse *Message) (*Message, error)
+	AgentBeforeResponseFunction       func(ctx context.Context, agent *Agent, messages []Message) ([]Message, error)
+	AgentAfterResponseFunction[P any] func(ctx context.Context, agent *Agent, messages []Message, toResponse *MessageWithPayload[P]) (*MessageWithPayload[P], error)
 )
 
 type Agent struct {
@@ -29,7 +29,7 @@ type Agent struct {
 	*models.Agent
 
 	beforeResponseHandlers []AgentBeforeResponseFunction
-	afterResponseHandlers  []AgentAfterResponseFunction
+	afterResponseHandlers  []AgentAfterResponseFunction[any]
 
 	brain *Brain
 }
@@ -53,6 +53,17 @@ type Message struct {
 	*models.Message
 	User *models.User
 	// Group *models.Group
+}
+
+type MessageWithPayload[P any] struct {
+	*Message
+	Payload *P
+}
+
+func (m *MessageWithPayload[P]) WithPayload(payload *P) *MessageWithPayload[P] {
+	m.Payload = payload
+
+	return m
 }
 
 type BrainBuilder struct {
@@ -194,9 +205,12 @@ func (a *Agent) Interact(ctx context.Context, messages []Message) (*Message, err
 		return nil, errors.WithStack(err)
 	}
 
-	message := &Message{
+	rawMessage := &Message{
 		Message: &messageResponse,
-		// User:    user,
+	}
+
+	message := &MessageWithPayload[any]{
+		Message: rawMessage,
 	}
 
 	for _, h := range a.afterResponseHandlers {
@@ -206,7 +220,7 @@ func (a *Agent) Interact(ctx context.Context, messages []Message) (*Message, err
 		}
 	}
 
-	return message, nil
+	return rawMessage, nil
 }
 
 func lastMessage(ctx context.Context, messages []Message) (*Message, error) {

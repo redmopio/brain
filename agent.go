@@ -14,15 +14,26 @@ type AgentBuilder struct {
 	constitution     *string
 
 	beforeResponseHandlers []AgentBeforeResponseFunction
-	afterResponseHandlers  []AgentAfterResponseFunction
+	afterResponseHandlers  []AgentAfterResponseFunction[any]
 
 	brain *Brain
+}
+
+type AgentBuilderWithPayload[P any] struct {
+	*AgentBuilder
+	afterResponseHandlers []AgentAfterResponseFunction[P]
 }
 
 func (b *Brain) NewAgentBuilder(name string) *AgentBuilder {
 	return &AgentBuilder{
 		name:  name,
 		brain: b,
+	}
+}
+
+func NewAgentBuilderWithPayload[P any](b *Brain, name string) *AgentBuilderWithPayload[P] {
+	return &AgentBuilderWithPayload[P]{
+		AgentBuilder: b.NewAgentBuilder(name),
 	}
 }
 
@@ -38,7 +49,7 @@ func (ab *AgentBuilder) WithConstitution(constitution string) *AgentBuilder {
 	return ab
 }
 
-func (ab *AgentBuilder) WithAfterResponseFunction(callback AgentAfterResponseFunction) *AgentBuilder {
+func (ab *AgentBuilderWithPayload[P]) WithAfterResponseFunction(callback AgentAfterResponseFunction[P]) *AgentBuilderWithPayload[P] {
 	ab.afterResponseHandlers = append(ab.afterResponseHandlers, callback)
 
 	return ab
