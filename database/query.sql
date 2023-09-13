@@ -34,18 +34,27 @@ WHERE name = $1 LIMIT 1;
 -- name: GetAllAgents :many
 SELECT * FROM agents;
 
+-- name: CreateConnector :one
+INSERT INTO connectors (
+  name
+) VALUES (
+  $1
+) RETURNING *;
+
 -- name: CreateGroup :one
 INSERT INTO groups (
-  name, description
+  id, name, description, connector_id
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 ) RETURNING *;
 
 -- name: GetGroupsFromUser :many
-SELECT g.id, g.name, g.description
+SELECT g.id , g.name, c.name as connector, g.description
 FROM groups g
 JOIN users_groups ug  
-ON g.id = ug.group_id
+  ON g.id = ug.group_id
+JOIN connectors c
+  ON g.connector_id = c.id
 WHERE ug.user_id = $1;
 
 -- name: AddUserToGroup :one
@@ -59,9 +68,14 @@ INSERT INTO users_groups (
 SELECT * FROM groups
 WHERE id = $1 LIMIT 1;
 
+
+-- name: GetConnectorByName :one
+SELECT * FROM connectors
+WHERE name = $1 LIMIT 1;
+
 -- name: GetUsersFromGroup :many
 SELECT u.id, u.user_name, u.phone_number, u.jid, u.telegram_id, u.context
 FROM users u
 JOIN users_groups ug
-ON u.id = ug.user_id
+  ON u.id = ug.user_id
 WHERE ug.group_id = $1;

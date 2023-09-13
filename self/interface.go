@@ -11,6 +11,55 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.ChannelName, groupId string, groupName string) (string, error) {
+	var err error
+
+	dbGroup, err := brain.DatabaseClient.GetGroupByID(ctx, groupId)
+	if err != nil {
+		// scope if err is due to group not found
+		if !errors.Is(err, sql.ErrNoRows) {
+			fmt.Printf("Error getting group %s: %s\n", groupId, err.Error())
+			return "", errors.WithStack(err)
+		}
+
+		fmt.Printf("Group %s not found, creating it...\n", groupId)
+
+		connector, err := brain.DatabaseClient.GetConnectorByName(ctx, channel.String())
+		if err != nil {
+			fmt.Printf("Error getting connector from channel '%s': %s\n", channel.String(), err.Error())
+			return "", errors.WithStack(err)
+		}
+
+		createdGroup, err := brain.DatabaseClient.CreateGroup(ctx, models.CreateGroupParams{
+			ID:          groupId,
+			Name:        sql.NullString{String: groupName, Valid: true},
+			Description: sql.NullString{String: groupName, Valid: true},
+			ConnectorID: sql.NullString{String: connector.ID.String(), Valid: true},
+		})
+		if err != nil {
+			fmt.Printf("Error creating group %s: %s\n", groupId, err.Error())
+			return "", errors.WithStack(err)
+		}
+
+		fmt.Printf("Group %s created!\n", groupId)
+
+		dbGroup = createdGroup
+	}
+
+	return dbGroup.Name.String, nil
+}
+
+func (brain *SystemEngine) HandleGroupUser(ctx context.Context, groupId string, userId string) (string, error) {
+	var err error
+
+	dbGroup, err := brain.DatabaseClient.GetGroupByID(ctx, groupId)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return dbGroup.Name.String, nil
+}
+
 func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
 	var user models.User
 	var err error

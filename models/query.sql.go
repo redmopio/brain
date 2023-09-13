@@ -22,7 +22,7 @@ INSERT INTO users_groups (
 
 type AddUserToGroupParams struct {
 	UserID  uuid.UUID
-	GroupID uuid.UUID
+	GroupID string
 }
 
 func (q *Queries) AddUserToGroup(ctx context.Context, arg AddUserToGroupParams) (UsersGroup, error) {
@@ -37,21 +37,48 @@ func (q *Queries) AddUserToGroup(ctx context.Context, arg AddUserToGroupParams) 
 	return i, err
 }
 
+const createConnector = `-- name: CreateConnector :one
+INSERT INTO connectors (
+  name
+) VALUES (
+  $1
+) RETURNING id, created_at, updated_at, name
+`
+
+func (q *Queries) CreateConnector(ctx context.Context, name string) (Connector, error) {
+	row := q.db.QueryRowContext(ctx, createConnector, name)
+	var i Connector
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
+}
+
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (
-  name, description
+  id, name, description, connector_id
 ) VALUES (
-  $1, $2
-) RETURNING id, created_at, updated_at, name, description
+  $1, $2, $3, $4
+) RETURNING id, created_at, updated_at, name, description, connector_id
 `
 
 type CreateGroupParams struct {
+	ID          string
 	Name        sql.NullString
 	Description sql.NullString
+	ConnectorID sql.NullString
 }
 
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, createGroup, arg.Name, arg.Description)
+	row := q.db.QueryRowContext(ctx, createGroup,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.ConnectorID,
+	)
 	var i Group
 	err := row.Scan(
 		&i.ID,
@@ -59,6 +86,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.UpdatedAt,
 		&i.Name,
 		&i.Description,
+		&i.ConnectorID,
 	)
 	return i, err
 }
@@ -152,12 +180,29 @@ func (q *Queries) GetAllAgents(ctx context.Context) ([]Agent, error) {
 	return items, nil
 }
 
+const getConnectorByName = `-- name: GetConnectorByName :one
+SELECT id, created_at, updated_at, name FROM connectors
+WHERE name = $1 LIMIT 1
+`
+
+func (q *Queries) GetConnectorByName(ctx context.Context, name string) (Connector, error) {
+	row := q.db.QueryRowContext(ctx, getConnectorByName, name)
+	var i Connector
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
+}
+
 const getGroupByID = `-- name: GetGroupByID :one
-SELECT id, created_at, updated_at, name, description FROM groups
+SELECT id, created_at, updated_at, name, description, connector_id FROM groups
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetGroupByID(ctx context.Context, id uuid.UUID) (Group, error) {
+func (q *Queries) GetGroupByID(ctx context.Context, id string) (Group, error) {
 	row := q.db.QueryRowContext(ctx, getGroupByID, id)
 	var i Group
 	err := row.Scan(
@@ -166,21 +211,25 @@ func (q *Queries) GetGroupByID(ctx context.Context, id uuid.UUID) (Group, error)
 		&i.UpdatedAt,
 		&i.Name,
 		&i.Description,
+		&i.ConnectorID,
 	)
 	return i, err
 }
 
 const getGroupsFromUser = `-- name: GetGroupsFromUser :many
-SELECT g.id, g.name, g.description
+SELECT g.id , g.name, c.name as connector, g.description
 FROM groups g
 JOIN users_groups ug  
-ON g.id = ug.group_id
+  ON g.id = ug.group_id
+JOIN connectors c
+  ON g.connector_id = c.id
 WHERE ug.user_id = $1
 `
 
 type GetGroupsFromUserRow struct {
-	ID          uuid.UUID
+	ID          string
 	Name        sql.NullString
+	Connector   string
 	Description sql.NullString
 }
 
@@ -193,7 +242,12 @@ func (q *Queries) GetGroupsFromUser(ctx context.Context, userID uuid.UUID) ([]Ge
 	var items []GetGroupsFromUserRow
 	for rows.Next() {
 		var i GetGroupsFromUserRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Connector,
+			&i.Description,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -311,7 +365,7 @@ const getUsersFromGroup = `-- name: GetUsersFromGroup :many
 SELECT u.id, u.user_name, u.phone_number, u.jid, u.telegram_id, u.context
 FROM users u
 JOIN users_groups ug
-ON u.id = ug.user_id
+  ON u.id = ug.user_id
 WHERE ug.group_id = $1
 `
 
@@ -324,7 +378,7 @@ type GetUsersFromGroupRow struct {
 	Context     sql.NullString
 }
 
-func (q *Queries) GetUsersFromGroup(ctx context.Context, groupID uuid.UUID) ([]GetUsersFromGroupRow, error) {
+func (q *Queries) GetUsersFromGroup(ctx context.Context, groupID string) ([]GetUsersFromGroupRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersFromGroup, groupID)
 	if err != nil {
 		return nil, err

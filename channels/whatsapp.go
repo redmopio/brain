@@ -116,8 +116,8 @@ func (w *WhatsAppConnector) Disconnect(ctx context.Context) {
 	w.client.Disconnect()
 }
 
-func (w *WhatsAppConnector) SendMessage(ctx context.Context, sender string, message string) (string, error) {
-	senderJID, err := types.ParseJID(sender)
+func (w *WhatsAppConnector) SendMessage(ctx context.Context, groupId string, senderId string, message string) (string, error) {
+	senderJID, err := types.ParseJID(senderId)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

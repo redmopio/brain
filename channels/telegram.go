@@ -9,17 +9,20 @@ import (
 )
 
 type (
-	TelegramResponseFunc func(ctx context.Context, senderID string, message string) (string, error)
+	TelegramGroupHandler func(ctx context.Context, groupId int64, groupName string) (string, error)
+	TelegramResponseFunc func(ctx context.Context, groupId int64, senderId string, message string) (string, error)
 	TelegramConnector    struct {
-		apiKey   string
-		response TelegramResponseFunc
+		apiKey       string
+		response     TelegramResponseFunc
+		groupHandler TelegramGroupHandler
 	}
 )
 
-func NewTelegramConnector(config *config.Config, response TelegramResponseFunc) *TelegramConnector {
+func NewTelegramConnector(config *config.Config, groupHandler TelegramGroupHandler, response TelegramResponseFunc) *TelegramConnector {
 	return &TelegramConnector{
-		apiKey:   config.TelegramAPIKey,
-		response: response,
+		apiKey:       config.TelegramAPIKey,
+		groupHandler: groupHandler,
+		response:     response,
 	}
 }
 
@@ -39,15 +42,15 @@ func (t *TelegramConnector) Connect(ctx context.Context) {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		log.Println(update)
-
 		if update.ChannelPost != nil {
 			log.Printf("[%s] %s", update.ChannelPost.From.UserName, update.ChannelPost.Text)
 		}
 		if update.Message != nil { // If we got a message
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+			log.Printf("\n--> [Group:%d-%s][User:%s] %s", update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.UserName, update.Message.Text)
 
-			responseMessage, err := t.response(ctx, update.Message.From.UserName, update.Message.Text)
+			t.groupHandler(ctx, update.Message.Chat.ID, update.Message.Chat.Title)
+
+			responseMessage, err := t.response(ctx, update.Message.Chat.ID, update.Message.From.UserName, update.Message.Text)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -66,5 +69,5 @@ func (t *TelegramConnector) Disconnect(ctx context.Context) {
 }
 
 func (t *TelegramConnector) SendMessage(ctx context.Context, sender string, message string) (string, error) {
-	return t.response(ctx, sender, message)
+	return t.response(ctx, 0, sender, message)
 }

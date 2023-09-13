@@ -19,12 +19,20 @@ type Agent struct {
 	Constitution string
 }
 
+type Connector struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+}
+
 type Group struct {
-	ID          uuid.UUID
+	ID          string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Name        sql.NullString
 	Description sql.NullString
+	ConnectorID sql.NullString
 }
 
 type Message struct {
@@ -51,7 +59,7 @@ type User struct {
 
 type UsersGroup struct {
 	UserID    uuid.UUID
-	GroupID   uuid.UUID
+	GroupID   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

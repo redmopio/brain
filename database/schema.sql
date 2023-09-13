@@ -42,19 +42,29 @@ CREATE TABLE agents (
 CREATE UNIQUE INDEX agents_name_idx ON agents (name);
 
 
+CREATE TABLE connectors (
+    id         uuid default gen_random_uuid() not null primary key,
+
+    created_at timestamp with time zone default now() not null,
+    updated_at timestamp with time zone default now() not null,
+
+    name       text not null
+);
+
 CREATE TABLE groups (
-    id          uuid default gen_random_uuid() not null primary key,
+    id          text default gen_random_uuid() not null primary key,
 
     created_at  timestamp with time zone default now() not null,
     updated_at  timestamp with time zone default now() not null,
 
-    name        varchar(255) null,
-    description text null
+    name          varchar(255) null,
+    description   text null,
+    connector_id  text null references connectors(id)
 );
 
 CREATE TABLE users_groups (
     user_id    uuid references users(id),
-    group_id   uuid references groups(id),
+    group_id   text references groups(id),
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
 

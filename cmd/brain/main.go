@@ -42,9 +42,14 @@ func main() {
 	var telegramChannel *channels.TelegramConnector
 
 	if config.TelegramAPIKey != "" {
-		telegramChannel = channels.NewTelegramConnector(config, func(ctx context.Context, sender string, message string) (string, error) {
-			return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)
-		})
+		telegramChannel = channels.NewTelegramConnector(config,
+			func(ctx context.Context, groupId int64, groupName string) (string, error) {
+				return brain.HandleGroup(ctx, channels.TelegramChannel, fmt.Sprintf("%d", groupId), groupName)
+			},
+			func(ctx context.Context, groupId int64, senderId string, message string) (string, error) {
+				return "test", nil
+				// return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)
+			})
 
 		telegramChannel.Connect(ctx)
 	}
