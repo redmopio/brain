@@ -31,9 +31,16 @@ func main() {
 
 	ctx := context.Background()
 
-	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, "", sender.String(), message)
-	})
+	whatsAppChannel := channels.NewWhatsAppConnector(config,
+		func(ctx context.Context, chatJID types.JID, groupName string) (string, error) {
+			return brain.HandleGroup(ctx, channels.WhatsAppChannel, chatJID.String(), groupName)
+		},
+		func(ctx context.Context, chatJID types.JID, senderJID types.JID) (string, error) {
+			return brain.HandleGroupSender(ctx, channels.WhatsAppChannel, chatJID.String(), senderJID.String())
+		},
+		func(ctx context.Context, senderJID types.JID, message string) (string, error) {
+			return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, "", senderJID.String(), message)
+		})
 
 	if !config.WhatsAppDisabled {
 		go whatsAppChannel.Connect(ctx)

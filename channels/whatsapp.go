@@ -21,18 +21,24 @@ import (
 )
 
 type (
-	WhatsAppResponseFunc func(ctx context.Context, sender types.JID, message string) (string, error)
-	WhatsAppConnector    struct {
-		DatabaseName string
-		response     WhatsAppResponseFunc
-		client       *whatsmeow.Client
+	WhatsappGroupHandler     func(ctx context.Context, chatJID types.JID, groupName string) (string, error)
+	WhatsappUserGroupHandler func(ctx context.Context, chatJID types.JID, senderJID types.JID) (string, error)
+	WhatsAppResponseFunc     func(ctx context.Context, senderJID types.JID, message string) (string, error)
+	WhatsAppConnector        struct {
+		DatabaseName     string
+		groupHandler     WhatsappGroupHandler
+		userGroupHandler WhatsappUserGroupHandler
+		response         WhatsAppResponseFunc
+		client           *whatsmeow.Client
 	}
 )
 
-func NewWhatsAppConnector(config *config.Config, response WhatsAppResponseFunc) *WhatsAppConnector {
+func NewWhatsAppConnector(config *config.Config, groupHandler WhatsappGroupHandler, userGroupHandler WhatsappUserGroupHandler, response WhatsAppResponseFunc) *WhatsAppConnector {
 	return &WhatsAppConnector{
-		DatabaseName: config.WhatsAppDatabaseName,
-		response:     response,
+		DatabaseName:     config.WhatsAppDatabaseName,
+		groupHandler:     groupHandler,
+		userGroupHandler: userGroupHandler,
+		response:         response,
 	}
 }
 
@@ -45,12 +51,25 @@ func (w *WhatsAppConnector) eventHandler(evt interface{}) {
 
 		ctx := context.Background()
 		sender := v.Info.Sender
+		chat := v.Info.Chat
 		userMessage := v.Message.GetConversation()
 
 		fmt.Println("Received a message:", userMessage)
 		fmt.Println("Sender:", sender)
 
 		senderJID := sender.ToNonAD()
+		chatJID := chat.ToNonAD()
+
+		_, err := w.groupHandler(ctx, chatJID, chatJID.String())
+		if err != nil {
+			fmt.Printf("\nError handling group: %s\n", err)
+		}
+
+		_, err = w.userGroupHandler(ctx, chatJID, senderJID)
+		if err != nil {
+			fmt.Printf("\nError handling user group: %s\n", err)
+		}
+
 		response, err := w.response(ctx, senderJID, userMessage)
 		if err != nil {
 			panic(err)
