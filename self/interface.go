@@ -12,8 +12,6 @@ import (
 )
 
 func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.ChannelName, groupId string, groupName string) (string, error) {
-	var err error
-
 	dbGroup, err := brain.DatabaseClient.GetGroupByID(ctx, groupId)
 	if err != nil {
 		// scope if err is due to group not found
@@ -49,37 +47,42 @@ func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.Cha
 	return dbGroup.Name.String, nil
 }
 
-func (brain *SystemEngine) HandleGroupUser(ctx context.Context, groupId string, userId string) (string, error) {
-	var err error
-
-	dbGroup, err := brain.DatabaseClient.GetGroupByID(ctx, groupId)
+func (brain *SystemEngine) HandleGroupSender(ctx context.Context, channel channels.ChannelName, groupId string, sender string) (string, error) {
+	user, err := brain.getUserFromSender(ctx, channel, sender)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	return dbGroup.Name.String, nil
+	userId := user.ID.String()
+
+	groupUsers, err := brain.DatabaseClient.GetUsersFromGroup(ctx, groupId)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// check if user is already in group
+	for _, userFromGroup := range groupUsers {
+		if userFromGroup.ID.String() == userId {
+			return userId, nil
+		}
+	}
+
+	_, err = brain.DatabaseClient.AddUserToGroup(ctx, models.AddUserToGroupParams{
+		UserID:  user.ID,
+		GroupID: groupId,
+	})
+
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return userId, nil
 }
 
 func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
-	var user models.User
-	var err error
-
-	if channel == channels.WhatsAppChannel {
-		user, err = brain.DatabaseClient.GetUserByJID(ctx, sql.NullString{
-			String: sender,
-			Valid:  true,
-		})
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
-	} else if channel == channels.TelegramChannel {
-		user, err = brain.DatabaseClient.GetUserByTelegramID(ctx, sql.NullString{
-			String: sender,
-			Valid:  true,
-		})
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
+	user, err := brain.getUserFromSender(ctx, channel, sender)
+	if err != nil {
+		return "", errors.WithStack(err)
 	}
 
 	fmt.Println("User: ", user.UserName.String)
@@ -98,7 +101,7 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 		return "", errors.WithStack(err)
 	}
 
-	brainMessage, agent, err := brain.processMessageResponse(ctx, &user, lastMessages, userMessage)
+	brainMessage, agent, err := brain.processMessageResponse(ctx, user, lastMessages, userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -110,4 +113,29 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 	}
 
 	return responseMessage.Content.String, nil
+}
+
+func (brain *SystemEngine) getUserFromSender(ctx context.Context, channel channels.ChannelName, sender string) (*models.User, error) {
+	var user models.User
+	var err error
+
+	if channel == channels.WhatsAppChannel {
+		user, err = brain.DatabaseClient.GetUserByJID(ctx, sql.NullString{
+			String: sender,
+			Valid:  true,
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	} else if channel == channels.TelegramChannel {
+		user, err = brain.DatabaseClient.GetUserByTelegramID(ctx, sql.NullString{
+			String: sender,
+			Valid:  true,
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	return &user, nil
 }

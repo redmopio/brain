@@ -46,6 +46,9 @@ func main() {
 			func(ctx context.Context, groupId int64, groupName string) (string, error) {
 				return brain.HandleGroup(ctx, channels.TelegramChannel, fmt.Sprintf("%d", groupId), groupName)
 			},
+			func(ctx context.Context, groupId int64, sender string) (string, error) {
+				return brain.HandleGroupSender(ctx, channels.TelegramChannel, fmt.Sprintf("%d", groupId), sender)
+			},
 			func(ctx context.Context, groupId int64, senderId string, message string) (string, error) {
 				return "test", nil
 				// return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)

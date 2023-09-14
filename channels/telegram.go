@@ -9,20 +9,23 @@ import (
 )
 
 type (
-	TelegramGroupHandler func(ctx context.Context, groupId int64, groupName string) (string, error)
-	TelegramResponseFunc func(ctx context.Context, groupId int64, senderId string, message string) (string, error)
-	TelegramConnector    struct {
-		apiKey       string
-		response     TelegramResponseFunc
-		groupHandler TelegramGroupHandler
+	TelegramGroupHandler     func(ctx context.Context, groupId int64, groupName string) (string, error)
+	TelegramUserGroupHandler func(ctx context.Context, groupId int64, sender string) (string, error)
+	TelegramResponseFunc     func(ctx context.Context, groupId int64, senderId string, message string) (string, error)
+	TelegramConnector        struct {
+		apiKey           string
+		groupHandler     TelegramGroupHandler
+		userGroupHandler TelegramUserGroupHandler
+		response         TelegramResponseFunc
 	}
 )
 
-func NewTelegramConnector(config *config.Config, groupHandler TelegramGroupHandler, response TelegramResponseFunc) *TelegramConnector {
+func NewTelegramConnector(config *config.Config, groupHandler TelegramGroupHandler, userGroupHandler TelegramUserGroupHandler, response TelegramResponseFunc) *TelegramConnector {
 	return &TelegramConnector{
-		apiKey:       config.TelegramAPIKey,
-		groupHandler: groupHandler,
-		response:     response,
+		apiKey:           config.TelegramAPIKey,
+		groupHandler:     groupHandler,
+		userGroupHandler: userGroupHandler,
+		response:         response,
 	}
 }
 
@@ -48,7 +51,15 @@ func (t *TelegramConnector) Connect(ctx context.Context) {
 		if update.Message != nil { // If we got a message
 			log.Printf("\n--> [Group:%d-%s][User:%s] %s", update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.UserName, update.Message.Text)
 
-			t.groupHandler(ctx, update.Message.Chat.ID, update.Message.Chat.Title)
+			_, err := t.groupHandler(ctx, update.Message.Chat.ID, update.Message.Chat.Title)
+			if err != nil {
+				log.Println(err)
+			}
+
+			_, err = t.userGroupHandler(ctx, update.Message.Chat.ID, update.Message.From.UserName)
+			if err != nil {
+				log.Println(err)
+			}
 
 			responseMessage, err := t.response(ctx, update.Message.Chat.ID, update.Message.From.UserName, update.Message.Text)
 			if err != nil {
