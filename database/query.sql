@@ -1,3 +1,14 @@
+-- name: GetMessagesByGroupID :many
+SELECT m.id, m.user_id, m.role, m.content, m.parent_id, m.agent_id, u.user_name as username
+FROM (
+  SELECT id, user_id, role, content, parent_id, agent_id, created_at
+    FROM messages
+    WHERE group_id = $1
+) m
+JOIN users u
+ON m.user_id = u.id
+ORDER BY m.created_at DESC LIMIT $2;
+
 -- name: GetMessagesByUserID :many
 SELECT m.id, m.user_id, m.role, m.content, m.parent_id, m.agent_id, u.user_name as username
 FROM (
@@ -8,6 +19,7 @@ FROM (
 JOIN users u
 ON m.user_id = u.id
 ORDER BY m.created_at DESC LIMIT $2;
+
 
 -- name: CreateMessage :one
 INSERT INTO messages (
@@ -43,7 +55,7 @@ INSERT INTO connectors (
 
 -- name: CreateGroup :one
 INSERT INTO groups (
-  id, name, description, connector_id
+  real_id, name, description, connector_id
 ) VALUES (
   $1, $2, $3, $4
 ) RETURNING *;
@@ -67,6 +79,10 @@ INSERT INTO users_groups (
 -- name: GetGroupByID :one
 SELECT * FROM groups
 WHERE id = $1 LIMIT 1;
+
+-- name: GetGroupByRealID :one
+SELECT * FROM groups
+WHERE real_id = $1 LIMIT 1;
 
 
 -- name: GetConnectorByName :one

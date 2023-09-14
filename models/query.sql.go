@@ -22,7 +22,7 @@ INSERT INTO users_groups (
 
 type AddUserToGroupParams struct {
 	UserID  uuid.UUID
-	GroupID string
+	GroupID uuid.UUID
 }
 
 func (q *Queries) AddUserToGroup(ctx context.Context, arg AddUserToGroupParams) (UsersGroup, error) {
@@ -59,22 +59,22 @@ func (q *Queries) CreateConnector(ctx context.Context, name string) (Connector, 
 
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (
-  id, name, description, connector_id
+  real_id, name, description, connector_id
 ) VALUES (
   $1, $2, $3, $4
-) RETURNING id, created_at, updated_at, name, description, connector_id
+) RETURNING id, created_at, updated_at, name, description, real_id, connector_id
 `
 
 type CreateGroupParams struct {
-	ID          string
+	RealID      sql.NullString
 	Name        sql.NullString
 	Description sql.NullString
-	ConnectorID sql.NullString
+	ConnectorID uuid.NullUUID
 }
 
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
 	row := q.db.QueryRowContext(ctx, createGroup,
-		arg.ID,
+		arg.RealID,
 		arg.Name,
 		arg.Description,
 		arg.ConnectorID,
@@ -86,6 +86,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.UpdatedAt,
 		&i.Name,
 		&i.Description,
+		&i.RealID,
 		&i.ConnectorID,
 	)
 	return i, err
@@ -96,7 +97,7 @@ INSERT INTO messages (
   user_id, role, content, parent_id, agent_id
 ) VALUES (
   $1, $2, $3, $4, $5
-) RETURNING id, created_at, updated_at, user_id, role, content, parent_id, agent_id
+) RETURNING id, created_at, updated_at, user_id, group_id, role, content, parent_id, agent_id
 `
 
 type CreateMessageParams struct {
@@ -121,6 +122,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UserID,
+		&i.GroupID,
 		&i.Role,
 		&i.Content,
 		&i.ParentID,
@@ -198,11 +200,11 @@ func (q *Queries) GetConnectorByName(ctx context.Context, name string) (Connecto
 }
 
 const getGroupByID = `-- name: GetGroupByID :one
-SELECT id, created_at, updated_at, name, description, connector_id FROM groups
+SELECT id, created_at, updated_at, name, description, real_id, connector_id FROM groups
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetGroupByID(ctx context.Context, id string) (Group, error) {
+func (q *Queries) GetGroupByID(ctx context.Context, id uuid.UUID) (Group, error) {
 	row := q.db.QueryRowContext(ctx, getGroupByID, id)
 	var i Group
 	err := row.Scan(
@@ -211,6 +213,27 @@ func (q *Queries) GetGroupByID(ctx context.Context, id string) (Group, error) {
 		&i.UpdatedAt,
 		&i.Name,
 		&i.Description,
+		&i.RealID,
+		&i.ConnectorID,
+	)
+	return i, err
+}
+
+const getGroupByRealID = `-- name: GetGroupByRealID :one
+SELECT id, created_at, updated_at, name, description, real_id, connector_id FROM groups
+WHERE real_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetGroupByRealID(ctx context.Context, realID sql.NullString) (Group, error) {
+	row := q.db.QueryRowContext(ctx, getGroupByRealID, realID)
+	var i Group
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Description,
+		&i.RealID,
 		&i.ConnectorID,
 	)
 	return i, err
@@ -227,7 +250,7 @@ WHERE ug.user_id = $1
 `
 
 type GetGroupsFromUserRow struct {
-	ID          string
+	ID          uuid.UUID
 	Name        sql.NullString
 	Connector   string
 	Description sql.NullString
@@ -247,6 +270,64 @@ func (q *Queries) GetGroupsFromUser(ctx context.Context, userID uuid.UUID) ([]Ge
 			&i.Name,
 			&i.Connector,
 			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMessagesByGroupID = `-- name: GetMessagesByGroupID :many
+SELECT m.id, m.user_id, m.role, m.content, m.parent_id, m.agent_id, u.user_name as username
+FROM (
+  SELECT id, user_id, role, content, parent_id, agent_id, created_at
+    FROM messages
+    WHERE group_id = $1
+) m
+JOIN users u
+ON m.user_id = u.id
+ORDER BY m.created_at DESC LIMIT $2
+`
+
+type GetMessagesByGroupIDParams struct {
+	GroupID uuid.NullUUID
+	Limit   int32
+}
+
+type GetMessagesByGroupIDRow struct {
+	ID       uuid.UUID
+	UserID   uuid.NullUUID
+	Role     sql.NullString
+	Content  sql.NullString
+	ParentID uuid.NullUUID
+	AgentID  uuid.NullUUID
+	Username sql.NullString
+}
+
+func (q *Queries) GetMessagesByGroupID(ctx context.Context, arg GetMessagesByGroupIDParams) ([]GetMessagesByGroupIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMessagesByGroupID, arg.GroupID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMessagesByGroupIDRow
+	for rows.Next() {
+		var i GetMessagesByGroupIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Role,
+			&i.Content,
+			&i.ParentID,
+			&i.AgentID,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}
@@ -378,7 +459,7 @@ type GetUsersFromGroupRow struct {
 	Context     sql.NullString
 }
 
-func (q *Queries) GetUsersFromGroup(ctx context.Context, groupID string) ([]GetUsersFromGroupRow, error) {
+func (q *Queries) GetUsersFromGroup(ctx context.Context, groupID uuid.UUID) ([]GetUsersFromGroupRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersFromGroup, groupID)
 	if err != nil {
 		return nil, err

@@ -53,12 +53,12 @@ func (t *TelegramConnector) Connect(ctx context.Context) {
 
 			_, err := t.groupHandler(ctx, update.Message.Chat.ID, update.Message.Chat.Title)
 			if err != nil {
-				log.Println(err)
+				log.Printf("\nError handling group: %s\n", err)
 			}
 
 			_, err = t.userGroupHandler(ctx, update.Message.Chat.ID, update.Message.From.UserName)
 			if err != nil {
-				log.Println(err)
+				log.Printf("\nError handling user group: %s\n", err)
 			}
 
 			responseMessage, err := t.response(ctx, update.Message.Chat.ID, update.Message.From.UserName, update.Message.Text)

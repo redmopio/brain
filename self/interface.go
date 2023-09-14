@@ -12,7 +12,7 @@ import (
 )
 
 func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.ChannelName, groupId string, groupName string) (string, error) {
-	dbGroup, err := brain.DatabaseClient.GetGroupByID(ctx, groupId)
+	dbGroup, err := brain.getGroupFromRealID(ctx, groupId)
 	if err != nil {
 		// scope if err is due to group not found
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -29,10 +29,10 @@ func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.Cha
 		}
 
 		createdGroup, err := brain.DatabaseClient.CreateGroup(ctx, models.CreateGroupParams{
-			ID:          groupId,
+			RealID:      sql.NullString{String: groupId, Valid: true},
 			Name:        sql.NullString{String: groupName, Valid: true},
 			Description: sql.NullString{String: groupName, Valid: true},
-			ConnectorID: sql.NullString{String: connector.ID.String(), Valid: true},
+			ConnectorID: uuid.NullUUID{UUID: connector.ID, Valid: true},
 		})
 		if err != nil {
 			fmt.Printf("Error creating group %s: %s\n", groupId, err.Error())
@@ -41,7 +41,7 @@ func (brain *SystemEngine) HandleGroup(ctx context.Context, channel channels.Cha
 
 		fmt.Printf("Group %s created!\n", groupId)
 
-		dbGroup = createdGroup
+		dbGroup = &createdGroup
 	}
 
 	return dbGroup.Name.String, nil
@@ -53,9 +53,14 @@ func (brain *SystemEngine) HandleGroupSender(ctx context.Context, channel channe
 		return "", errors.WithStack(err)
 	}
 
+	dbGroup, err := brain.getGroupFromRealID(ctx, groupId)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
 	userId := user.ID.String()
 
-	groupUsers, err := brain.DatabaseClient.GetUsersFromGroup(ctx, groupId)
+	groupUsers, err := brain.DatabaseClient.GetUsersFromGroup(ctx, dbGroup.ID)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -69,7 +74,7 @@ func (brain *SystemEngine) HandleGroupSender(ctx context.Context, channel channe
 
 	_, err = brain.DatabaseClient.AddUserToGroup(ctx, models.AddUserToGroupParams{
 		UserID:  user.ID,
-		GroupID: groupId,
+		GroupID: dbGroup.ID,
 	})
 
 	if err != nil {
@@ -113,6 +118,18 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 	}
 
 	return responseMessage.Content.String, nil
+}
+
+func (brain *SystemEngine) getGroupFromRealID(ctx context.Context, realGroupID string) (*models.Group, error) {
+	group, err := brain.DatabaseClient.GetGroupByRealID(ctx, sql.NullString{
+		String: realGroupID,
+		Valid:  true,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &group, nil
 }
 
 func (brain *SystemEngine) getUserFromSender(ctx context.Context, channel channels.ChannelName, sender string) (*models.User, error) {

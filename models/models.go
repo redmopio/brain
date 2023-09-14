@@ -27,12 +27,13 @@ type Connector struct {
 }
 
 type Group struct {
-	ID          string
+	ID          uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Name        sql.NullString
 	Description sql.NullString
-	ConnectorID sql.NullString
+	RealID      sql.NullString
+	ConnectorID uuid.NullUUID
 }
 
 type Message struct {
@@ -40,6 +41,7 @@ type Message struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	UserID    uuid.NullUUID
+	GroupID   uuid.NullUUID
 	Role      sql.NullString
 	Content   sql.NullString
 	ParentID  uuid.NullUUID
@@ -59,7 +61,7 @@ type User struct {
 
 type UsersGroup struct {
 	UserID    uuid.UUID
-	GroupID   string
+	GroupID   uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

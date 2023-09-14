@@ -21,6 +21,7 @@ CREATE TABLE messages (
     updated_at timestamp with time zone default now() not null,
 
     user_id    uuid references users(id),
+    group_id   uuid references groups(id),
     role       text,
     content    text,
 
@@ -52,19 +53,20 @@ CREATE TABLE connectors (
 );
 
 CREATE TABLE groups (
-    id          text default gen_random_uuid() not null primary key,
+    id          uuid default gen_random_uuid() not null primary key,
 
     created_at  timestamp with time zone default now() not null,
     updated_at  timestamp with time zone default now() not null,
 
     name          varchar(255) null,
     description   text null,
-    connector_id  text null references connectors(id)
+    real_id       text null,
+    connector_id  uuid null references connectors(id)
 );
 
 CREATE TABLE users_groups (
     user_id    uuid references users(id),
-    group_id   text references groups(id),
+    group_id   uuid references groups(id),
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
 
