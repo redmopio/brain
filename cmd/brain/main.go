@@ -32,7 +32,7 @@ func main() {
 	ctx := context.Background()
 
 	whatsAppChannel := channels.NewWhatsAppConnector(config, func(ctx context.Context, sender types.JID, message string) (string, error) {
-		return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, sender.String(), message)
+		return brain.GenerateConversationResponse(ctx, channels.WhatsAppChannel, "", sender.String(), message)
 	})
 
 	if !config.WhatsAppDisabled {
@@ -49,9 +49,8 @@ func main() {
 			func(ctx context.Context, groupId int64, sender string) (string, error) {
 				return brain.HandleGroupSender(ctx, channels.TelegramChannel, fmt.Sprintf("%d", groupId), sender)
 			},
-			func(ctx context.Context, groupId int64, senderId string, message string) (string, error) {
-				return "test", nil
-				// return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, sender, message)
+			func(ctx context.Context, groupId int64, sender string, message string) (string, error) {
+				return brain.GenerateConversationResponse(ctx, channels.TelegramChannel, fmt.Sprintf("%d", groupId), sender, message)
 			})
 
 		telegramChannel.Connect(ctx)

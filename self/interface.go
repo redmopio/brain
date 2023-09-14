@@ -84,7 +84,20 @@ func (brain *SystemEngine) HandleGroupSender(ctx context.Context, channel channe
 	return userId, nil
 }
 
-func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, sender string, message string) (string, error) {
+func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, channel channels.ChannelName, groupId string, sender string, message string) (string, error) {
+	dbGroup, err := brain.getGroupFromRealID(ctx, groupId)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	lastMessages, err := brain.DatabaseClient.GetMessagesByGroupID(ctx, models.GetMessagesByGroupIDParams{
+		GroupID: uuid.NullUUID{UUID: dbGroup.ID, Valid: true},
+		Limit:   20,
+	})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
 	user, err := brain.getUserFromSender(ctx, channel, sender)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -92,15 +105,7 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 
 	fmt.Println("User: ", user.UserName.String)
 
-	lastMessages, err := brain.DatabaseClient.GetMessagesByUserID(ctx, models.GetMessagesByUserIDParams{
-		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
-		Limit:  20,
-	})
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	userMessage := buildUserMessage(user.ID, message, lastMessages)
+	userMessage := buildUserMessage(dbGroup.ID, user.ID, message, lastMessages)
 	userMessage, err = brain.storeMessage(ctx, &userMessage)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -111,7 +116,7 @@ func (brain *SystemEngine) GenerateConversationResponse(ctx context.Context, cha
 		return "", errors.WithStack(err)
 	}
 
-	chatbotMessage := buildChatbotMessage(user.ID, brainMessage, userMessage.ID, agent)
+	chatbotMessage := buildChatbotMessage(dbGroup.ID, user.ID, brainMessage, userMessage.ID, agent)
 	responseMessage, err := brain.storeMessage(ctx, &chatbotMessage)
 	if err != nil {
 		return "", errors.WithStack(err)

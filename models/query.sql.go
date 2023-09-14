@@ -94,13 +94,14 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO messages (
-  user_id, role, content, parent_id, agent_id
+  group_id, user_id, role, content, parent_id, agent_id
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4, $5, $6
 ) RETURNING id, created_at, updated_at, user_id, group_id, role, content, parent_id, agent_id
 `
 
 type CreateMessageParams struct {
+	GroupID  uuid.NullUUID
 	UserID   uuid.NullUUID
 	Role     sql.NullString
 	Content  sql.NullString
@@ -110,6 +111,7 @@ type CreateMessageParams struct {
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
 	row := q.db.QueryRowContext(ctx, createMessage,
+		arg.GroupID,
 		arg.UserID,
 		arg.Role,
 		arg.Content,

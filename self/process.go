@@ -13,7 +13,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (string, *models.Agent, error) {
+func (brain *SystemEngine) processMessageResponse(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByGroupIDRow, inputMessage models.Message) (string, *models.Agent, error) {
 	openAiResponse, agent, err := brain.processMessageWithOpenAI(ctx, user, lastMessages, inputMessage)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
@@ -64,7 +64,7 @@ func (brain *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, use
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	messages := brain.prepareMessagesForConversation(&agentWriteParseData, messageContent, nil, []models.GetMessagesByUserIDRow{})
+	messages := brain.prepareMessagesForConversation(&agentWriteParseData, messageContent, nil, []models.GetMessagesByGroupIDRow{})
 
 	response, err := brain.LLMEngine.Client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model:    openai.GPT3Dot5Turbo,
@@ -77,7 +77,7 @@ func (brain *SystemEngine) processDataMessageWithOpenAI(ctx context.Context, use
 	return &response, &agentWriteParseData, nil
 }
 
-func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByUserIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
+func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *models.User, lastMessages []models.GetMessagesByGroupIDRow, inputMessage models.Message) (*openai.ChatCompletionResponse, *models.Agent, error) {
 	agentWriteStoreData, err := brain.getAgent(ctx, string(AgentNameAgentWriteStoreData))
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -101,7 +101,7 @@ func (brain *SystemEngine) processMessageWithOpenAI(ctx context.Context, user *m
 	return &response, &agentWriteStoreData, nil
 }
 
-func (brain *SystemEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByUserIDRow) []openai.ChatCompletionMessage {
+func (brain *SystemEngine) prepareMessagesForConversation(agent *models.Agent, messageContent string, user *models.User, lastMessages []models.GetMessagesByGroupIDRow) []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 
 	messages = append(messages, openai.ChatCompletionMessage{
@@ -157,6 +157,7 @@ func (brain *SystemEngine) getAgent(ctx context.Context, agentName string) (mode
 
 func (brain *SystemEngine) storeMessage(ctx context.Context, message *models.Message) (models.Message, error) {
 	storedMessage, err := brain.DatabaseClient.CreateMessage(ctx, models.CreateMessageParams{
+		GroupID:  message.GroupID,
 		UserID:   message.UserID,
 		Role:     message.Role,
 		Content:  message.Content,
@@ -172,9 +173,10 @@ func (brain *SystemEngine) storeMessage(ctx context.Context, message *models.Mes
 	return storedMessage, nil
 }
 
-func buildUserMessage(userId uuid.UUID, messageContent string, lastMessages []models.GetMessagesByUserIDRow) models.Message {
+func buildUserMessage(groupId uuid.UUID, userId uuid.UUID, messageContent string, lastMessages []models.GetMessagesByGroupIDRow) models.Message {
 	userMessage := models.Message{
 		Role:    sql.NullString{String: openai.ChatMessageRoleUser, Valid: true},
+		GroupID: uuid.NullUUID{UUID: groupId, Valid: true},
 		UserID:  uuid.NullUUID{UUID: userId, Valid: true},
 		Content: sql.NullString{String: messageContent, Valid: true},
 	}
@@ -186,9 +188,10 @@ func buildUserMessage(userId uuid.UUID, messageContent string, lastMessages []mo
 	return userMessage
 }
 
-func buildChatbotMessage(userId uuid.UUID, messageContent string, parentId uuid.UUID, agent *models.Agent) models.Message {
+func buildChatbotMessage(groupId uuid.UUID, userId uuid.UUID, messageContent string, parentId uuid.UUID, agent *models.Agent) models.Message {
 	responseMessage := models.Message{
 		Role:     sql.NullString{String: openai.ChatMessageRoleAssistant, Valid: true},
+		GroupID:  uuid.NullUUID{UUID: groupId, Valid: true},
 		UserID:   uuid.NullUUID{UUID: userId, Valid: true},
 		Content:  sql.NullString{String: messageContent, Valid: true},
 		ParentID: uuid.NullUUID{UUID: parentId, Valid: true},

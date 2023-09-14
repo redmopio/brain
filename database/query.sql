@@ -23,9 +23,9 @@ ORDER BY m.created_at DESC LIMIT $2;
 
 -- name: CreateMessage :one
 INSERT INTO messages (
-  user_id, role, content, parent_id, agent_id
+  group_id, user_id, role, content, parent_id, agent_id
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4, $5, $6
 ) RETURNING *;
 
 
